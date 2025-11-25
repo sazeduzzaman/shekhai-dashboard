@@ -4,8 +4,7 @@ import { Link } from "react-router-dom";
 import withRouter from "../../components/Common/withRouter";
 
 //redux
-import { useSelector, useDispatch } from "react-redux";
-import { createSelector } from "reselect";
+import { useDispatch } from "react-redux";
 
 // Formik validation
 import * as Yup from "yup";
@@ -24,23 +23,22 @@ import {
   Label,
 } from "reactstrap";
 
-// actions
-import { loginUser, socialLogin } from "/src/store/actions";
+// Import your fake backend function
+import axios from "axios";
+import fakeBackend from "../../helpers/AuthType/fakeBackend";
 
-// import images
-import profile from "../../assets/images/profile-img.png";
-import logo from "../../assets/images/logo.svg";
-import lightlogo from "../../assets/images/logo-light.svg";
+// Initialize fake backend (only runs in development)
+fakeBackend();
 
 const Login = (props) => {
   //meta title
   document.title = "Login | shekhai - Vite React Admin & Dashboard Template";
+
   const dispatch = useDispatch();
+  const [error, setError] = React.useState("");
 
   const validation = useFormik({
-    // enableReinitialize : use this flag when initial values needs to be changed
     enableReinitialize: true,
-
     initialValues: {
       email: "admin@shekhai.com",
       password: "admin",
@@ -49,28 +47,20 @@ const Login = (props) => {
       email: Yup.string().required("Please Enter Your Email"),
       password: Yup.string().required("Please Enter Your Password"),
     }),
-    onSubmit: (values) => {
-      dispatch(loginUser(values, props.router.navigate));
+    onSubmit: async (values) => {
+      setError(""); // reset error
+      try {
+        const response = await axios.post("/post-fake-login", values);
+        localStorage.setItem("authUser", JSON.stringify(response.data));
+        props.router.navigate("/dashboard"); // redirect on success
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+            "Username and password are invalid. Please try again."
+        );
+      }
     },
   });
-
-  const LoginProperties = createSelector(
-    (state) => state.Login,
-    (login) => ({
-      error: login.error,
-    })
-  );
-
-  const { error } = useSelector(LoginProperties);
-
-  const signIn = (type) => {
-    dispatch(socialLogin(type, props.router.navigate));
-  };
-
-  //for facebook and google authentication
-  const socialResponse = (type) => {
-    signIn(type);
-  };
 
   return (
     <React.Fragment>
@@ -93,7 +83,11 @@ const Login = (props) => {
                       </div>
                     </Col>
                     <Col className="col-5 align-self-end">
-                      <img src={profile} alt="" className="img-fluid" />
+                      <img
+                        src="/src/assets/images/profile-img.png"
+                        alt=""
+                        className="img-fluid"
+                      />
                     </Col>
                   </Row>
                 </div>
@@ -103,7 +97,7 @@ const Login = (props) => {
                       <div className="avatar-md profile-user-wid mb-4">
                         <span className="avatar-title rounded-circle bg-light">
                           <img
-                            src={lightlogo}
+                            src="/src/assets/images/logo-light.svg"
                             alt=""
                             className="rounded-circle"
                             height="34"
@@ -115,7 +109,7 @@ const Login = (props) => {
                       <div className="avatar-md profile-user-wid mb-4">
                         <span className="avatar-title rounded-circle bg-light">
                           <img
-                            src={logo}
+                            src="/src/assets/images/logo.svg"
                             alt=""
                             className="rounded-circle"
                             height="34"
@@ -133,20 +127,20 @@ const Login = (props) => {
                         return false;
                       }}
                     >
-                      {error ? <Alert color="danger">{error}</Alert> : null}
+                      {error && <Alert color="danger">{error}</Alert>}
 
                       <div className="mb-3">
                         <Label className="form-label">Email</Label>
                         <Input
                           name="email"
-                          className="form-control"
-                          placeholder="Enter email"
                           type="email"
+                          placeholder="Enter email"
                           onChange={validation.handleChange}
                           onBlur={validation.handleBlur}
                           value={validation.values.email || ""}
                           invalid={
-                            validation.touched.email && validation.errors.email
+                            validation.touched.email &&
+                            validation.errors.email
                               ? true
                               : false
                           }
@@ -162,12 +156,12 @@ const Login = (props) => {
                         <Label className="form-label">Password</Label>
                         <Input
                           name="password"
-                          autoComplete="off"
-                          value={validation.values.password || ""}
                           type="password"
+                          autoComplete="off"
                           placeholder="Enter Password"
                           onChange={validation.handleChange}
                           onBlur={validation.handleBlur}
+                          value={validation.values.password || ""}
                           invalid={
                             validation.touched.password &&
                             validation.errors.password
@@ -205,37 +199,6 @@ const Login = (props) => {
                           Log In
                         </button>
                       </div>
-
-                      {/* <div className="mt-4 text-center">
-                        <h5 className="font-size-14 mb-3">Sign in with</h5>
-
-                        <ul className="list-inline">
-                          <li className="list-inline-item">
-                            <Link
-                              to="#"
-                              className="social-list-item bg-primary text-white border-primary"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                socialResponse("facebook");
-                              }}
-                            >
-                              <i className="mdi mdi-facebook" />
-                            </Link>
-                          </li>
-                          <li className="list-inline-item">
-                            <Link
-                              to="#"
-                              className="social-list-item bg-danger text-white border-danger"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                socialResponse("google");
-                              }}
-                            >
-                              <i className="mdi mdi-google" />
-                            </Link>
-                          </li>
-                        </ul>
-                      </div> */}
 
                       <div className="mt-4 text-center">
                         <Link to="/forgot-password" className="text-muted">
