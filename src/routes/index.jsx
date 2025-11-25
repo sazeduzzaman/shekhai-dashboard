@@ -175,6 +175,14 @@ import ContactsGrid from "../pages/Contacts/contacts-grid";
 import ContactsList from "../pages/Contacts/ContactList/contacts-list";
 import ContactsProfile from "../pages/Contacts/ContactsProfile/index";
 import UiProgressbar from "../pages/Ui/UiProgressbar";
+import Categories from "../pages/Categories/Categories";
+import AddCategory from "../pages/Categories/AddCategory";
+import AllCourses from "../pages/Courses/AllCourses";
+import AddCourses from "../pages/Courses/AddCourses";
+import Instructors from "../pages/Instructors/Instructors";
+import AddInstructor from "../pages/Instructors/AddInstructor";
+import Students from "../pages/Students/Students";
+import AddStudent from "../pages/Students/AddStudent";
 // import UiProgressbar from "../../src/pages/Ui/UiProgressbar"
 
 const authProtectedRoutes = [
@@ -193,7 +201,14 @@ const authProtectedRoutes = [
   { path: "/crypto-kyc-application", component: <CryptoKYCApplication /> },
 
   //chat
-  { path: "/chat", component: <Chat /> },
+  { path: "/all-categories", component: <Categories /> },
+  { path: "/categories/add", component: <AddCategory /> },
+  { path: "/all-courses", component: <AllCourses /> },
+  { path: "/courses/add", component: <AddCourses /> },
+  { path: "/instructor", component: <Instructors /> },
+  { path: "/instructor/add", component: <AddInstructor /> },
+  { path: "/students", component: <Students /> },
+  { path: "/students/add", component: <AddStudent /> },
 
   //File Manager
   { path: "/apps-filemanager", component: <FileManager /> },

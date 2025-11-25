@@ -169,7 +169,7 @@ const SidebarContent = (props) => {
               </Link>
               <ul className="sub-menu" aria-expanded="false">
                 <li>
-                  <Link to="/categories">{props.t("All Categories")}</Link>
+                  <Link to="/all-categories">{props.t("All Categories")}</Link>
                 </li>
                 <li>
                   <Link to="/categories/add">{props.t("Add Category")}</Link>
@@ -185,28 +185,40 @@ const SidebarContent = (props) => {
               </Link>
               <ul className="sub-menu" aria-expanded="false">
                 <li>
-                  <Link to="/courses">{props.t("All Courses")}</Link>
+                  <Link to="/all-courses">{props.t("All Courses")}</Link>
                 </li>
                 <li>
                   <Link to="/courses/add">{props.t("Add Course")}</Link>
                 </li>
               </ul>
             </li>
-
-            {/* Instructors */}
             <li>
-              <Link to="/instructors">
+              <Link to="/#" className="has-arrow">
                 <i className="bx bx-user"></i>
                 <span>{props.t("Instructors")}</span>
               </Link>
+              <ul className="sub-menu" aria-expanded="false">
+                <li>
+                  <Link to="/instructor">{props.t("All Instructors")}</Link>
+                </li>
+                <li>
+                  <Link to="/instructor/add">{props.t("Add Instructor")}</Link>
+                </li>
+              </ul>
             </li>
-
-            {/* Students */}
             <li>
-              <Link to="/students">
+              <Link to="/#" className="has-arrow">
                 <i className="bx bx-group"></i>
                 <span>{props.t("Students")}</span>
               </Link>
+              <ul className="sub-menu" aria-expanded="false">
+                <li>
+                  <Link to="/students">{props.t("All Students")}</Link>
+                </li>
+                <li>
+                  <Link to="/students/add">{props.t("Add Student")}</Link>
+                </li>
+              </ul>
             </li>
 
             {/* Assignments & Exams */}

@@ -72,7 +72,7 @@ const Login = (props) => {
                     </Col>
                     <Col className="col-5 align-self-end">
                       <img
-                        src="/src/assets/images/profile-img.png"
+                        src="../../assets/images/profile-img.png"
                         alt=""
                         className="img-fluid"
                       />
