@@ -2,14 +2,9 @@ import React from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import withRouter from "../../components/Common/withRouter";
-
-//redux
-import { useDispatch } from "react-redux";
-
-// Formik validation
-import * as Yup from "yup";
 import { useFormik } from "formik";
-
+import * as Yup from "yup";
+import axios from "axios";
 import {
   Row,
   Col,
@@ -23,18 +18,12 @@ import {
   Label,
 } from "reactstrap";
 
-// Import your fake backend function
-import axios from "axios";
-import fakeBackend from "../../helpers/AuthType/fakeBackend";
-
-// Initialize fake backend (only runs in development)
+// Initialize fake backend
+import fakeBackend from "../../helpers/fake-backend";
 fakeBackend();
 
 const Login = (props) => {
-  //meta title
   document.title = "Login | shekhai - Vite React Admin & Dashboard Template";
-
-  const dispatch = useDispatch();
   const [error, setError] = React.useState("");
 
   const validation = useFormik({
@@ -48,11 +37,11 @@ const Login = (props) => {
       password: Yup.string().required("Please Enter Your Password"),
     }),
     onSubmit: async (values) => {
-      setError(""); // reset error
+      setError("");
       try {
         const response = await axios.post("/post-fake-login", values);
         localStorage.setItem("authUser", JSON.stringify(response.data));
-        props.router.navigate("/dashboard"); // redirect on success
+        props.router.navigate("/dashboard");
       } catch (err) {
         setError(
           err.response?.data?.message ||
@@ -139,17 +128,16 @@ const Login = (props) => {
                           onBlur={validation.handleBlur}
                           value={validation.values.email || ""}
                           invalid={
-                            validation.touched.email &&
-                            validation.errors.email
+                            validation.touched.email && validation.errors.email
                               ? true
                               : false
                           }
                         />
-                        {validation.touched.email && validation.errors.email ? (
+                        {validation.touched.email && validation.errors.email && (
                           <FormFeedback type="invalid">
                             {validation.errors.email}
                           </FormFeedback>
-                        ) : null}
+                        )}
                       </div>
 
                       <div className="mb-3">
@@ -170,11 +158,11 @@ const Login = (props) => {
                           }
                         />
                         {validation.touched.password &&
-                        validation.errors.password ? (
-                          <FormFeedback type="invalid">
-                            {validation.errors.password}
-                          </FormFeedback>
-                        ) : null}
+                          validation.errors.password && (
+                            <FormFeedback type="invalid">
+                              {validation.errors.password}
+                            </FormFeedback>
+                          )}
                       </div>
 
                       <div className="form-check">
