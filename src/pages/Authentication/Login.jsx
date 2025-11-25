@@ -17,9 +17,8 @@ import {
   FormFeedback,
   Label,
 } from "reactstrap";
+import fakeBackend from "../../helpers/AuthType/fakeBackend";
 
-// Initialize fake backend
-import fakeBackend from "../../helpers/fake-backend";
 fakeBackend();
 
 const Login = (props) => {
