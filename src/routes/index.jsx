@@ -1,9 +1,5 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
-
-// Pages Component
-import Chat from "../pages/Chat/Chat";
-
 // // File Manager
 import FileManager from "../pages/FileManager/index";
 
@@ -71,10 +67,6 @@ import TwostepVerification2 from "../pages/AuthenticationInner/auth-two-step-ver
 
 // // Dashboard
 import Dashboard from "../pages/Dashboard/index";
-import DashboardSaas from "../pages/Dashboard-saas/index";
-import DashboardCrypto from "../pages/Dashboard-crypto/index";
-import Blog from "../pages/Dashboard-Blog/index";
-import DashboardJob from "../pages/DashboardJob/index";
 
 // //Crypto
 import CryptoWallet from "../pages/Crypto/CryptoWallet/crypto-wallet";
@@ -187,10 +179,6 @@ import AddStudent from "../pages/Students/AddStudent";
 
 const authProtectedRoutes = [
   { path: "/dashboard", component: <Dashboard /> },
-  { path: "/dashboard-saas", component: <DashboardSaas /> },
-  { path: "/dashboard-crypto", component: <DashboardCrypto /> },
-  { path: "/blog", component: <Blog /> },
-  { path: "/dashboard-job", component: <DashboardJob /> },
 
   //   //Crypto
   { path: "/crypto-wallet", component: <CryptoWallet /> },

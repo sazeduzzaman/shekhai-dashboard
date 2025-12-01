@@ -1,48 +1,84 @@
-import React from "react";
+import React, { useState } from "react";
+import axios from "axios";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useNavigate } from "react-router-dom";
 import Breadcrumbs from "../../components/Common/Breadcrumb";
+import toast, { Toaster } from "react-hot-toast";
 
 const AddCategory = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false); // loading state
   document.title = "Add Category | LMS Dashboard";
+
+  const generateSlug = (text) => text.toLowerCase().trim().replace(/\s+/g, "-");
+
+  const saved = localStorage.getItem("authUser");
+  const parsed = saved ? JSON.parse(saved) : null;
+  const token = parsed?.token;
+  const role = parsed?.user?.role;
 
   const formik = useFormik({
     initialValues: {
-      courseName: "",
-      instructor: "",
-      category: "",
-      students: "",
-      createdAt: "",
-      status: "Active",
+      name: "",
+      slug: "",
+      description: "",
     },
     validationSchema: Yup.object({
-      courseName: Yup.string().min(2).required("Required"),
-      instructor: Yup.string().min(2).required("Required"),
-      category: Yup.string().required("Required"),
-      students: Yup.number().typeError("Must be a number").required("Required"),
-      createdAt: Yup.date().typeError("Invalid date").required("Required"),
-      status: Yup.string().oneOf(["Active", "Inactive"]),
+      name: Yup.string().min(2).required("Category name is required"),
+      slug: Yup.string().required("Slug is required"),
+      description: Yup.string().optional(),
     }),
-    onSubmit: (values, { resetForm }) => {
-      console.log("Course Submitted:", values);
-      alert("Course added successfully!");
-      resetForm();
+    onSubmit: async (values, { resetForm }) => {
+      if (!token) {
+        toast.error("You must be logged in to add a category.");
+        navigate("/login");
+        return;
+      }
+
+      if (role !== "admin" && role !== "instructor") {
+        toast.error("You do not have permission to add categories.");
+        return;
+      }
+
+      setLoading(true); // start loading
+      try {
+        const res = await axios.post(
+          "https://shekhai-server.up.railway.app/api/v1/categories",
+          values,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        toast.success("Category added successfully!");
+        resetForm(); // reset the form immediately
+      } catch (error) {
+        console.error(error);
+        toast.error(
+          error?.response?.data?.message ||
+            "Something went wrong while adding category."
+        );
+      } finally {
+        setLoading(false); // stop loading
+      }
     },
   });
 
   return (
     <div className="container my-5">
+      <Toaster position="top-right" reverseOrder={false} />
       <Breadcrumbs title="Categories" breadcrumbItem="Add Category" />
 
       <div className="card shadow-sm rounded-4 p-4">
         {/* Header */}
         <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
           <div>
-            <h3 className="text-primary mb-1">Add New Course Category</h3>
+            <h3 className="text-primary mb-1">Add New Category</h3>
             <small className="text-muted">
-              Fill the form below to add a new course.
+              Fill the form below to add a new category.
             </small>
           </div>
           <button
@@ -56,122 +92,80 @@ const AddCategory = () => {
         {/* Form */}
         <form onSubmit={formik.handleSubmit}>
           <div className="row g-3">
+            {/* Name */}
             <div className="col-md-6">
-              <label className="form-label">Course Name</label>
+              <label className="form-label">Category Name</label>
               <input
                 type="text"
                 className={`form-control ${
-                  formik.touched.courseName && formik.errors.courseName
-                    ? "is-invalid"
-                    : ""
+                  formik.touched.name && formik.errors.name ? "is-invalid" : ""
                 }`}
-                name="courseName"
-                value={formik.values.courseName}
-                onChange={formik.handleChange}
+                name="name"
+                value={formik.values.name}
+                onChange={(e) => {
+                  formik.setFieldValue("name", e.target.value);
+                  formik.setFieldValue("slug", generateSlug(e.target.value));
+                }}
                 onBlur={formik.handleBlur}
-                placeholder="Enter course name"
+                placeholder="Enter category name"
               />
-              {formik.touched.courseName && formik.errors.courseName && (
-                <div className="invalid-feedback">{formik.errors.courseName}</div>
+              {formik.touched.name && formik.errors.name && (
+                <div className="invalid-feedback">{formik.errors.name}</div>
               )}
             </div>
 
+            {/* Slug */}
             <div className="col-md-6">
-              <label className="form-label">Instructor</label>
+              <label className="form-label">Slug</label>
               <input
                 type="text"
                 className={`form-control ${
-                  formik.touched.instructor && formik.errors.instructor
-                    ? "is-invalid"
-                    : ""
+                  formik.touched.slug && formik.errors.slug ? "is-invalid" : ""
                 }`}
-                name="instructor"
-                value={formik.values.instructor}
+                name="slug"
+                value={formik.values.slug}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                placeholder="Enter instructor name"
+                placeholder="auto-generated from name"
               />
-              {formik.touched.instructor && formik.errors.instructor && (
-                <div className="invalid-feedback">{formik.errors.instructor}</div>
+              {formik.touched.slug && formik.errors.slug && (
+                <div className="invalid-feedback">{formik.errors.slug}</div>
               )}
             </div>
 
-            <div className="col-md-6">
-              <label className="form-label">Category</label>
-              <input
-                type="text"
-                className={`form-control ${
-                  formik.touched.category && formik.errors.category
-                    ? "is-invalid"
-                    : ""
-                }`}
-                name="category"
-                value={formik.values.category}
+            {/* Description */}
+            <div className="col-12">
+              <label className="form-label">Description</label>
+              <textarea
+                className="form-control"
+                name="description"
+                rows="4"
+                value={formik.values.description}
                 onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                placeholder="Enter category"
-              />
-              {formik.touched.category && formik.errors.category && (
-                <div className="invalid-feedback">{formik.errors.category}</div>
-              )}
-            </div>
-
-            <div className="col-md-6">
-              <label className="form-label">Enrolled Students</label>
-              <input
-                type="number"
-                className={`form-control ${
-                  formik.touched.students && formik.errors.students
-                    ? "is-invalid"
-                    : ""
-                }`}
-                name="students"
-                value={formik.values.students}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                placeholder="Enter number of students"
-              />
-              {formik.touched.students && formik.errors.students && (
-                <div className="invalid-feedback">{formik.errors.students}</div>
-              )}
-            </div>
-
-            <div className="col-md-6">
-              <label className="form-label">Created At</label>
-              <input
-                type="date"
-                className={`form-control ${
-                  formik.touched.createdAt && formik.errors.createdAt
-                    ? "is-invalid"
-                    : ""
-                }`}
-                name="createdAt"
-                value={formik.values.createdAt}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-              />
-              {formik.touched.createdAt && formik.errors.createdAt && (
-                <div className="invalid-feedback">{formik.errors.createdAt}</div>
-              )}
-            </div>
-
-            <div className="col-md-6">
-              <label className="form-label">Status</label>
-              <select
-                className="form-select"
-                name="status"
-                value={formik.values.status}
-                onChange={formik.handleChange}
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
+                placeholder="Write a short description (optional)"
+              ></textarea>
             </div>
           </div>
 
+          {/* Submit */}
           <div className="mt-4">
-            <button className="btn btn-primary px-4" type="submit">
-              Add Course
+            <button
+              className="btn btn-primary px-4"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span
+                    className="spinner-border spinner-border-sm me-2"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
+                  Adding...
+                </>
+              ) : (
+                "Add Category"
+              )}
             </button>
           </div>
         </form>

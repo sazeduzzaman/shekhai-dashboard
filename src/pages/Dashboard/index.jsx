@@ -46,7 +46,6 @@ const Dashboard = ({ t }) => {
   const dispatch = useDispatch();
 
   // State
-  const [subscribeModal, setSubscribeModal] = useState(false);
   const [orderModal, setOrderModal] = useState(false);
   const [periodType, setPeriodType] = useState("Year");
 
@@ -70,18 +69,6 @@ const Dashboard = ({ t }) => {
       description: "$16.2",
     },
   ];
-
-  // Initial load
-  useEffect(() => {
-    dispatch(fetchChartsData("Year"));
-
-    const timer = setTimeout(() => {
-      setSubscribeModal(true);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [dispatch]);
-
   // Change chart period
   const onChangeChartPeriod = (type) => {
     setPeriodType(type);
@@ -167,38 +154,6 @@ const Dashboard = ({ t }) => {
           </Col>
         </Row>
       </Container>
-
-      {/* Subscribe Modal */}
-      <Modal
-        isOpen={subscribeModal}
-        centered
-        toggle={() => setSubscribeModal(!subscribeModal)}
-      >
-        <ModalHeader
-          toggle={() => setSubscribeModal(!subscribeModal)}
-        ></ModalHeader>
-        <ModalBody className="text-center">
-          <div className="avatar-md mx-auto mb-4">
-            <div className="avatar-title bg-light rounded-circle text-primary h1">
-              <i className="mdi mdi-email-open"></i>
-            </div>
-          </div>
-          <h4 className="text-primary">Subscribe!</h4>
-          <p className="text-muted mb-4">
-            Subscribe to our newsletter and get notifications to stay updated.
-          </p>
-          <div className="input-group rounded bg-light">
-            <Input
-              type="email"
-              className="form-control bg-transparent border-0"
-              placeholder="Enter Email address"
-            />
-            <Button color="primary" type="button">
-              <i className="bx bxs-paper-plane"></i>
-            </Button>
-          </div>
-        </ModalBody>
-      </Modal>
 
       {/* Order Modal */}
       <Modal

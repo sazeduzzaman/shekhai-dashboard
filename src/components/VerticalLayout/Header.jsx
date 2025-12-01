@@ -113,7 +113,7 @@ const Header = ({ t }) => {
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="Search ..."
+                      placeholder="Searchssss ..."
                       aria-label="Search"
                     />
                     <div className="input-group-append">

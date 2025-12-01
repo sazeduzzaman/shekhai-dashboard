@@ -58,6 +58,7 @@
     "react-dropzone": "^14.2.3",
     "react-dual-listbox": "^6.0.3",
     "react-flatpickr": "^3.10.13",
+    "react-hot-toast": "^2.6.0",
     "react-i18next": "^15.0.2",
     "react-input-mask": "^2.0.4",
     "react-jvectormap": "^0.0.15",
