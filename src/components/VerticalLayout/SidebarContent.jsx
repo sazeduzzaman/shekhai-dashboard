@@ -1,273 +1,218 @@
 import PropTypes from "prop-types";
-import React, { useEffect, useRef } from "react";
-
-// //Import Scrollbar
+import React, { useEffect, useRef, useCallback } from "react";
 import SimpleBar from "simplebar-react";
-
-// MetisMenu
 import MetisMenu from "metismenujs";
 import { Link, useLocation } from "react-router-dom";
 import withRouter from "../Common/withRouter";
-
-//i18n
 import { withTranslation } from "react-i18next";
-import { useCallback } from "react";
 
-const SidebarContent = (props) => {
+const SidebarContent = ({ t }) => {
   const ref = useRef();
-  const path = useLocation();
+  const location = useLocation();
 
-  const activateParentDropdown = useCallback((item) => {
-    item.classList.add("active");
-    const parent = item.parentElement;
-    const parent2El = parent.childNodes[1];
-    if (parent2El && parent2El.id !== "side-menu") {
-      parent2El.classList.add("mm-show");
-    }
+  // Get user role from localStorage (or your auth provider)
+  const userRole =
+    JSON.parse(localStorage.getItem("authUser"))?.role || "instructor";
 
-    if (parent) {
-      parent.classList.add("mm-active");
-      const parent2 = parent.parentElement;
-
-      if (parent2) {
-        parent2.classList.add("mm-show"); // ul tag
-
-        const parent3 = parent2.parentElement; // li tag
-
-        if (parent3) {
-          parent3.classList.add("mm-active"); // li
-          parent3.childNodes[0].classList.add("mm-active"); //a
-          const parent4 = parent3.parentElement; // ul
-          if (parent4) {
-            parent4.classList.add("mm-show"); // ul
-            const parent5 = parent4.parentElement;
-            if (parent5) {
-              parent5.classList.add("mm-show"); // li
-              parent5.childNodes[0].classList.add("mm-active"); // a tag
-            }
-          }
-        }
-      }
-      scrollElement(item);
-      return false;
-    }
-    scrollElement(item);
-    return false;
-  }, []);
-
-  const removeActivation = (items) => {
-    for (var i = 0; i < items.length; ++i) {
-      var item = items[i];
-      const parent = items[i].parentElement;
-
-      if (item && item.classList.contains("active")) {
-        item.classList.remove("active");
-      }
-      if (parent) {
-        const parent2El =
-          parent.childNodes && parent.childNodes.lenght && parent.childNodes[1]
-            ? parent.childNodes[1]
-            : null;
-        if (parent2El && parent2El.id !== "side-menu") {
-          parent2El.classList.remove("mm-show");
-        }
-
-        parent.classList.remove("mm-active");
-        const parent2 = parent.parentElement;
-
-        if (parent2) {
-          parent2.classList.remove("mm-show");
-
-          const parent3 = parent2.parentElement;
-          if (parent3) {
-            parent3.classList.remove("mm-active"); // li
-            parent3.childNodes[0].classList.remove("mm-active");
-
-            const parent4 = parent3.parentElement; // ul
-            if (parent4) {
-              parent4.classList.remove("mm-show"); // ul
-              const parent5 = parent4.parentElement;
-              if (parent5) {
-                parent5.classList.remove("mm-show"); // li
-                parent5.childNodes[0].classList.remove("mm-active"); // a tag
-              }
-            }
-          }
-        }
-      }
-    }
-  };
-
-  const activeMenu = useCallback(() => {
-    const pathName = path.pathname;
-    let matchingMenuItem = null;
-    const ul = document.getElementById("side-menu");
-    const items = ul.getElementsByTagName("a");
-    removeActivation(items);
-
-    for (let i = 0; i < items.length; ++i) {
-      if (pathName === items[i].pathname) {
-        matchingMenuItem = items[i];
-        break;
-      }
-    }
-    if (matchingMenuItem) {
-      activateParentDropdown(matchingMenuItem);
-    }
-  }, [path.pathname, activateParentDropdown]);
-
-  useEffect(() => {
-    ref.current.recalculate();
-  }, []);
-
-  // useEffect(() => {
-  //   new MetisMenu("#side-menu");
-  //   activeMenu();
-  // }, []);
-  useEffect(() => {
-    const metisMenu = new MetisMenu("#side-menu");
-    activeMenu();
-
-    // Cleanup on component unmount
-    return () => {
-      metisMenu.dispose();
-    };
-  }, []);
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    activeMenu();
-  }, [activeMenu]);
-
-  function scrollElement(item) {
+  const scrollElement = (item) => {
     if (item) {
       const currentPosition = item.offsetTop;
       if (currentPosition > window.innerHeight) {
         ref.current.getScrollElement().scrollTop = currentPosition - 300;
       }
     }
-  }
+  };
+
+  const activateParentDropdown = useCallback((item) => {
+    if (!item) return;
+
+    item.classList.add("active");
+
+    let parent = item.parentElement;
+
+    while (parent && parent.id !== "side-menu") {
+      const childMenu = parent.childNodes[1];
+      if (childMenu) childMenu.classList.add("mm-show");
+      parent.classList.add("mm-active");
+
+      if (parent.tagName === "LI") {
+        const link = parent.childNodes[0];
+        if (link) link.classList.add("mm-active");
+      }
+
+      parent = parent.parentElement;
+    }
+
+    scrollElement(item);
+  }, []);
+
+  const removeActivation = (items) => {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const parent = item.parentElement;
+
+      item.classList.remove("active");
+
+      if (parent) {
+        const childMenu =
+          parent.childNodes?.length > 1 ? parent.childNodes[1] : null;
+        if (childMenu && childMenu.id !== "side-menu") {
+          childMenu.classList.remove("mm-show");
+        }
+
+        parent.classList.remove("mm-active");
+
+        let ancestor = parent.parentElement;
+        while (ancestor && ancestor.id !== "side-menu") {
+          ancestor.classList.remove("mm-show", "mm-active");
+          if (ancestor.childNodes[0])
+            ancestor.childNodes[0].classList.remove("mm-active");
+          ancestor = ancestor.parentElement;
+        }
+      }
+    }
+  };
+
+  const activeMenu = useCallback(() => {
+    const pathName = location.pathname;
+    const ul = document.getElementById("side-menu");
+    if (!ul) return;
+
+    const items = ul.getElementsByTagName("a");
+    removeActivation(items);
+
+    const matchingMenuItem = Array.from(items).find(
+      (item) => item.pathname === pathName
+    );
+    if (matchingMenuItem) {
+      activateParentDropdown(matchingMenuItem);
+    }
+  }, [location.pathname, activateParentDropdown]);
+
+  useEffect(() => {
+    ref.current?.recalculate();
+  }, []);
+
+  useEffect(() => {
+    const metisMenu = new MetisMenu("#side-menu");
+    activeMenu();
+    return () => metisMenu.dispose();
+  }, [activeMenu]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    activeMenu();
+  }, [activeMenu]);
 
   return (
-    <React.Fragment>
-      <SimpleBar className="h-100" ref={ref}>
-        <div id="sidebar-menu">
-          <ul className="metismenu list-unstyled" id="side-menu">
-            {/* Dashboard */}
-            <li>
-              <Link to="/dashboard">
-                <i className="bx bx-home"></i>
-                <span>{props.t("Dashboard")}</span>
-              </Link>
-            </li>
+    <SimpleBar className="h-100" ref={ref}>
+      <div id="sidebar-menu">
+        <ul className="metismenu list-unstyled" id="side-menu">
+          {/* Dashboard */}
+          <li>
+            <Link to="/dashboard">
+              <i className="bx bx-home"></i>
+              <span>{t("Dashboard")}</span>
+            </Link>
+          </li>
 
-            {/* Course Categories */}
-            <li>
-              <Link to="/#" className="has-arrow">
-                <i className='bx bx-building'></i> 
-                <span>{props.t("Course Categories")}</span>
-              </Link>
-              <ul className="sub-menu" aria-expanded="false">
-                <li>
-                  <Link to="/all-categories">{props.t("All Categories")}</Link>
-                </li>
-                <li>
-                  <Link to="/categories/add">{props.t("Add Category")}</Link>
-                </li>
-              </ul>
-            </li>
+          {/* Course Categories */}
+          <li>
+            <Link to="/#" className="has-arrow">
+              <i className="bx bx-building"></i>
+              <span>{t("Course Categories")}</span>
+            </Link>
+            <ul className="sub-menu" aria-expanded="false">
+              <li>
+                <Link to="/all-categories">{t("All Categories")}</Link>
+              </li>
+              <li>
+                <Link to="/categories/add">{t("Add Category")}</Link>
+              </li>
+            </ul>
+          </li>
 
-            {/* Courses */}
-            <li>
-              <Link to="/#" className="has-arrow">
-                <i className="bx bx-book"></i>
-                <span>{props.t("Courses")}</span>
-              </Link>
-              <ul className="sub-menu" aria-expanded="false">
-                <li>
-                  <Link to="/all-courses">{props.t("All Courses")}</Link>
-                </li>
-                <li>
-                  <Link to="/courses/add">{props.t("Add Course")}</Link>
-                </li>
-              </ul>
-            </li>
+          {/* Users - only admin */}
+          {userRole === "admin" && (
             <li>
               <Link to="/#" className="has-arrow">
                 <i className="bx bx-user"></i>
-                <span>{props.t("Instructors")}</span>
+                <span>{t("Users")}</span>
               </Link>
               <ul className="sub-menu" aria-expanded="false">
                 <li>
-                  <Link to="/instructor">{props.t("All Instructors")}</Link>
+                  <Link to="/users">{t("All Users")}</Link>
                 </li>
                 <li>
-                  <Link to="/instructor/add">{props.t("Add Instructor")}</Link>
+                  <Link to="/users/add">{t("Add Users")}</Link>
                 </li>
               </ul>
             </li>
-            <li>
-              <Link to="/#" className="has-arrow">
-                <i className="bx bx-group"></i>
-                <span>{props.t("Students")}</span>
-              </Link>
-              <ul className="sub-menu" aria-expanded="false">
-                <li>
-                  <Link to="/students">{props.t("All Students")}</Link>
-                </li>
-                <li>
-                  <Link to="/students/add">{props.t("Add Student")}</Link>
-                </li>
-              </ul>
-            </li>
+          )}
 
-            {/* Assignments & Exams */}
-            <li>
-              <Link to="/#" className="has-arrow">
-                <i className="bx bx-task"></i>
-                <span>{props.t("Assignments & Exams")}</span>
-              </Link>
-              <ul className="sub-menu" aria-expanded="false">
-                <li>
-                  <Link to="/assignments">{props.t("All Assignments")}</Link>
-                </li>
-                <li>
-                  <Link to="/assignments/add">{props.t("Add Assignment")}</Link>
-                </li>
-                <li>
-                  <Link to="/exams">{props.t("All Exams")}</Link>
-                </li>
-                <li>
-                  <Link to="/exams/add">{props.t("Add Exam")}</Link>
-                </li>
-              </ul>
-            </li>
+          {/* Courses */}
+          <li>
+            <Link to="/#" className="has-arrow">
+              <i className="bx bx-book"></i>
+              <span>{t("Courses")}</span>
+            </Link>
+            <ul className="sub-menu" aria-expanded="false">
+              <li>
+                <Link to="/all-courses">{t("All Courses")}</Link>
+              </li>
+              <li>
+                <Link to="/courses/add">{t("Add Course")}</Link>
+              </li>
+            </ul>
+          </li>
 
-            {/* Reports */}
-            <li>
-              <Link to="/reports">
-                <i className="bx bx-bar-chart-alt-2"></i>
-                <span>{props.t("Reports")}</span>
-              </Link>
-            </li>
+          {/* Assignments & Exams */}
+          <li>
+            <Link to="/#" className="has-arrow">
+              <i className="bx bx-task"></i>
+              <span>{t("Assignments & Exams")}</span>
+            </Link>
+            <ul className="sub-menu" aria-expanded="false">
+              <li>
+                <Link to="/assignments">{t("All Assignments")}</Link>
+              </li>
+              <li>
+                <Link to="/assignments/add">{t("Add Assignment")}</Link>
+              </li>
+              <li>
+                <Link to="/exams">{t("All Exams")}</Link>
+              </li>
+              <li>
+                <Link to="/exams/add">{t("Add Exam")}</Link>
+              </li>
+            </ul>
+          </li>
 
-            {/* Settings */}
+          {/* Reports */}
+          <li>
+            <Link to="/reports">
+              <i className="bx bx-bar-chart-alt-2"></i>
+              <span>{t("Reports")}</span>
+            </Link>
+          </li>
+
+          {/* Settings - only admin */}
+          {userRole === "admin" && (
             <li>
               <Link to="/settings">
                 <i className="bx bx-cog"></i>
-                <span>{props.t("Settings")}</span>
+                <span>{t("Settings")}</span>
               </Link>
             </li>
-          </ul>
-        </div>
-      </SimpleBar>
-    </React.Fragment>
+          )}
+        </ul>
+      </div>
+    </SimpleBar>
   );
 };
 
 SidebarContent.propTypes = {
-  location: PropTypes.object,
-  t: PropTypes.any,
+  t: PropTypes.func,
 };
 
 export default withRouter(withTranslation()(SidebarContent));

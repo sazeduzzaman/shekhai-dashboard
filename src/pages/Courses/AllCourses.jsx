@@ -1,103 +1,104 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Breadcrumbs from "../../components/Common/Breadcrumb";
 import { Link } from "react-router-dom";
 
 const AllCourses = () => {
-  const initialData = [
-    {
-      id: "691d482b4b091f784188fe1f",
-      courseName: "UI/UX Design Mastery part 10",
-      instructor: "Bosses",
-      category: "UI-UX Design",
-      students: 0, // You can replace with enrolled count if available
-      createdAt: "2025-11-19",
-      status: "Active",
-      price: 129,
-      level: "Beginner",
-      totalModules: 3,
-      totalDuration: 180,
-      enrollmentDeadline: "2025-03-15",
-      published: true,
-    },
-    {
-      id: "691d482b4b091f784188fe2a",
-      courseName: "React for Beginners",
-      instructor: "John Doe",
-      category: "Web Development",
-      students: 320,
-      createdAt: "2024-04-12",
-      status: "Active",
-      price: 99,
-      level: "Beginner",
-      totalModules: 5,
-      totalDuration: 250,
-      enrollmentDeadline: "2025-06-01",
-      published: true,
-    },
-    {
-      id: "691d482b4b091f784188fe2b",
-      courseName: "Advanced JavaScript",
-      instructor: "Sarah Lee",
-      category: "Programming",
-      students: 210,
-      createdAt: "2024-01-28",
-      status: "Active",
-      price: 119,
-      level: "Intermediate",
-      totalModules: 6,
-      totalDuration: 300,
-      enrollmentDeadline: "2025-07-01",
-      published: true,
-    },
-    {
-      id: "691d482b4b091f784188fe2c",
-      courseName: "Node.js & Express Mastery",
-      instructor: "Emily Johnson",
-      category: "Backend Development",
-      students: 280,
-      createdAt: "2024-02-10",
-      status: "Active",
-      price: 129,
-      level: "Intermediate",
-      totalModules: 7,
-      totalDuration: 350,
-      enrollmentDeadline: "2025-08-01",
-      published: true,
-    },
-    {
-      id: "691d482b4b091f784188fe2d",
-      courseName: "Python for Everybody",
-      instructor: "Alex Brown",
-      category: "Programming",
-      students: 470,
-      createdAt: "2024-05-02",
-      status: "Inactive",
-      price: 109,
-      level: "Beginner",
-      totalModules: 4,
-      totalDuration: 220,
-      enrollmentDeadline: "2025-09-01",
-      published: true,
-    },
-  ];
-
   document.title = "Courses | LMS Dashboard";
 
+  const [courses, setCourses] = useState([]);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const filteredData = initialData.filter((item) =>
-    item.courseName.toLowerCase().includes(search.toLowerCase())
+  // ⛔ Replace this with your auth system
+  const authUser = JSON.parse(localStorage.getItem("authUser")); 
+  const token = authUser?.token;
+  const userRole = authUser?.role; // "admin" or "instructor"
+  const userId = authUser?._id;
+
+  // ----------------------------
+  // ⭐ Fetch Courses from API
+  // ----------------------------
+  const fetchCourses = async () => {
+    try {
+      const res = await fetch(
+        "https://shekhai-server.up.railway.app/api/v1/courses",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        let filtered = data.courses;
+
+        // ⭐ Role-based filtering
+        if (userRole === "instructor") {
+          filtered = filtered.filter(
+            (c) => c.instructor?._id === userId
+          );
+        }
+
+        setCourses(filtered);
+      }
+    } catch (error) {
+      console.error("Fetch Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  // ----------------------------
+  // ⭐ Delete Course
+  // ----------------------------
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this course?")) return;
+
+    try {
+      const res = await fetch(
+        `https://shekhai-server.up.railway.app/api/v1/courses/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const result = await res.json();
+
+      if (result.success) {
+        setCourses((prev) => prev.filter((c) => c._id !== id));
+        alert("Course deleted successfully!");
+      } else {
+        alert(result.message || "Delete failed");
+      }
+    } catch (err) {
+      console.error("Delete Error:", err);
+    }
+  };
+
+  // ----------------------------
+  // ⭐ Search Filter
+  // ----------------------------
+  const filteredData = courses.filter((course) =>
+    course.title.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div className="page-content">
       <div className="container-fluid">
-        {/* Breadcrumb */}
         <Breadcrumbs title="Courses" breadcrumbItem="All Courses" />
 
+        {/* Header */}
         <div className="card mb-3 shadow-none">
           <div className="card-header pt-4 d-flex justify-content-between align-items-center bg-white">
-            {/* Search Box */}
             <div style={{ width: "280px" }}>
               <input
                 type="text"
@@ -108,71 +109,89 @@ const AllCourses = () => {
               />
             </div>
 
-            {/* Add Course Button */}
-            <Link to="/courses/add" className="btn btn-success">
-              <i className="mdi mdi-plus me-1"></i>
-              Add Course
-            </Link>
+            {(userRole === "admin" || userRole === "instructor") && (
+              <Link to="/courses/add" className="btn btn-success">
+                <i className="mdi mdi-plus me-1"></i>
+                Add Course
+              </Link>
+            )}
           </div>
 
+          {/* Table */}
           <div className="card-body pt-0">
-            <div className="table-responsive">
-              <table className="table table-bordered align-middle">
-                <thead className="table-light">
-                  <tr>
-                    <th>#</th>
-                    <th>Course Name</th>
-                    <th>Instructor</th>
-                    <th>Category</th>
-                    <th>Enrolled</th>
-                    <th>Created At</th>
-                    <th>Status</th>
-                    <th style={{ width: "130px" }}>Actions</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {filteredData.map((item, index) => (
-                    <tr key={item.id}>
-                      <td>{index + 1}</td>
-                      <td>{item.courseName}</td>
-                      <td>{item.instructor}</td>
-                      <td>{item.category}</td>
-                      <td>{item.students}</td>
-                      <td>{item.createdAt}</td>
-                      <td>
-                        <span
-                          className={`badge bg-${
-                            item.status === "Active" ? "success" : "danger"
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                      </td>
-
-                      {/* ACTION BUTTONS */}
-                      <td>
-                        <div className="d-flex gap-2">
-                          <button className="btn btn-sm btn-primary">
-                            <i className="mdi mdi-eye"></i>
-                          </button>
-                          <button className="btn btn-sm btn-warning">
-                            <i className="mdi mdi-pencil"></i>
-                          </button>
-                          <button className="btn btn-sm btn-danger">
-                            <i className="mdi mdi-delete"></i>
-                          </button>
-                        </div>
-                      </td>
+            {loading ? (
+              <p className="text-center mt-3">Loading...</p>
+            ) : filteredData.length === 0 ? (
+              <p className="text-center mt-3">No courses found.</p>
+            ) : (
+              <div className="table-responsive">
+                <table className="table table-bordered align-middle">
+                  <thead className="table-light">
+                    <tr>
+                      <th>#</th>
+                      <th>Course Name</th>
+                      <th>Instructor</th>
+                      <th>Level</th>
+                      <th>Total Modules</th>
+                      <th>Created At</th>
+                      <th>Status</th>
+                      <th style={{ width: "150px" }}>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
 
-              {filteredData.length === 0 && (
-                <p className="text-center mt-3">No results found.</p>
-              )}
-            </div>
+                  <tbody>
+                    {filteredData.map((item, index) => (
+                      <tr key={item._id}>
+                        <td>{index + 1}</td>
+                        <td>{item.title}</td>
+                        <td>{item.instructor?.name || "N/A"}</td>
+                        <td>{item.level}</td>
+                        <td>{item.totalModules}</td>
+                        <td>{item.createdAt?.split("T")[0]}</td>
+                        <td>
+                          <span
+                            className={`badge bg-${
+                              item.published ? "success" : "danger"
+                            }`}
+                          >
+                            {item.published ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+
+                        {/* ACTIONS */}
+                        <td>
+                          <div className="d-flex gap-2">
+                            <Link
+                              to={`/courses/view/${item._id}`}
+                              className="btn btn-sm btn-primary"
+                            >
+                              <i className="mdi mdi-eye"></i>
+                            </Link>
+
+                            <Link
+                              to={`/courses/edit/${item._id}`}
+                              className="btn btn-sm btn-warning"
+                            >
+                              <i className="mdi mdi-pencil"></i>
+                            </Link>
+
+                            {(userRole === "admin" ||
+                              item.instructor?._id === userId) && (
+                              <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => handleDelete(item._id)}
+                              >
+                                <i className="mdi mdi-delete"></i>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,13 +1,16 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 
-const Authmiddleware = (props) => {
-  if (!localStorage.getItem("authUser")) {
-    return (
-      <Navigate to={{ pathname: "/login", state: { from: props.location } }} />
-    );
+const Authmiddleware = ({ children }) => {
+  // Check localStorage first
+  const authUser = JSON.parse(localStorage.getItem("authUser") || "null");
+
+  if (!authUser || !authUser.token) {
+    // Token missing → redirect to login
+    return <Navigate to="/login" replace />;
   }
-  return <React.Fragment>{props.children}</React.Fragment>;
+
+  return children;
 };
 
 export default Authmiddleware;

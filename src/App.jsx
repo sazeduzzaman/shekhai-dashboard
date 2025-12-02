@@ -1,111 +1,77 @@
-import PropTypes from "prop-types";
 import React from "react";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 
-import { Routes, Route } from "react-router-dom";
-import { connect } from "react-redux";
-
-import { useSelector } from "react-redux";
-import { createSelector } from "reselect";
-
-// Import Routes all
-import { authProtectedRoutes, publicRoutes } from "./routes/index";
-
-// Import all middleware
-import Authmiddleware from "./routes/route";
-
-// layouts Format
+// Layouts
 import VerticalLayout from "./components/VerticalLayout/";
-import HorizontalLayout from "./components/HorizontalLayout/";
 import NonAuthLayout from "./components/NonAuthLayout";
 
-// Import scss
+// Routes
+import { authProtectedRoutes, publicRoutes } from "./routes/index";
+
+// Middleware
+import Authmiddleware from "./routes/route";
+
 import "./assets/scss/theme.scss";
 
-// Import Firebase Configuration file
-// import { initFirebaseBackend } from "./helpers/firebase_helper"
+// Token auto-expiration wrapper
+const AuthTimer = ({ children }) => {
+  const navigate = useNavigate();
 
-import fakeBackend from "./helpers/AuthType/fakeBackend"
-// Activating fake backend
-fakeBackend();
+  React.useEffect(() => {
+    const checkToken = () => {
+      const authUser = JSON.parse(localStorage.getItem("authUser") || "null");
 
-// const firebaseConfig = {
-//   apiKey: import.meta.env.VITE_APP_APIKEY,
-//   authDomain: import.meta.env.VITE_APP_AUTHDOMAIN,
-//   databaseURL: import.meta.env.VITE_APP_DATABASEURL,
-//   projectId: import.meta.env.VITE_APP_PROJECTID,
-//   storageBucket: import.meta.env.VITE_APP_STORAGEBUCKET,
-//   messagingSenderId: import.meta.env.VITE_APP_MESSAGINGSENDERID,
-//   appId: import.meta.env.VITE_APP_APPID,
-//   measurementId: import.meta.env.VITE_APP_MEASUREMENTID,
-// };
+      if (
+        !authUser ||
+        !authUser.token ||
+        (authUser.expiresAt && Date.now() > authUser.expiresAt)
+      ) {
+        localStorage.removeItem("authUser");
+        navigate("/login", { replace: true });
+      }
+    };
 
-// init firebase backend
-// initFirebaseBackend(firebaseConfig)
+    checkToken();
+    const interval = setInterval(checkToken, 1000);
+    return () => clearInterval(interval);
+  }, [navigate]);
 
-const App = (props) => {
-  const LayoutProperties = createSelector(
-    (state) => state.Layout,
-    (layout) => ({
-      layoutType: layout.layoutType,
-    })
-  );
+  return children;
+};
 
-  const {
-    layoutType
-  } = useSelector(LayoutProperties);
-
-  function getLayout(layoutType) {
-    let layoutCls = VerticalLayout;
-    switch (layoutType) {
-      case "horizontal":
-        layoutCls = HorizontalLayout;
-        break;
-      default:
-        layoutCls = VerticalLayout;
-        break;
-    }
-    return layoutCls;
-  }
-
-  const Layout = getLayout(layoutType);
-
+const App = () => {
   return (
-    <React.Fragment>
-      <Routes>
-        {publicRoutes.map((route, idx) => (
-          <Route
-            path={route.path}
-            element={<NonAuthLayout>{route.component}</NonAuthLayout>}
-            key={idx}
-            exact={true}
-          />
-        ))}
+    <Routes>
+      {/* Public Routes */}
+      {publicRoutes.map((route, idx) => (
+        <Route
+          key={idx}
+          path={route.path}
+          element={<NonAuthLayout>{route.component}</NonAuthLayout>}
+          exact
+        />
+      ))}
 
-        {authProtectedRoutes.map((route, idx) => (
-          <Route
-            path={route.path}
-            element={
+      {/* Protected Routes */}
+      {authProtectedRoutes.map((route, idx) => (
+        <Route
+          key={idx}
+          path={route.path}
+          element={
+            <AuthTimer>
               <Authmiddleware>
-                <Layout>{route.component}</Layout>
+                <VerticalLayout>{route.component}</VerticalLayout>
               </Authmiddleware>
-            }
-            key={idx}
-            exact={true}
-          />
-        ))}
-      </Routes>
-    </React.Fragment>
+            </AuthTimer>
+          }
+          exact
+        />
+      ))}
+
+      {/* Redirect unknown routes to login */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
   );
 };
 
-App.propTypes = {
-  layout: PropTypes.any,
-};
-
-const mapStateToProps = (state) => {
-  return {
-    layout: state.Layout,
-  };
-};
-
-export default connect(mapStateToProps, null)(App);
+export default App;

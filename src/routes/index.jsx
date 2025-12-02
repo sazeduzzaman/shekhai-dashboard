@@ -139,7 +139,6 @@ import UiImages from "../pages/Ui/UiImages";
 import UiLightbox from "../pages/Ui/UiLightbox";
 import UiModal from "../pages/Ui/UiModal/index";
 
-
 import UiTabsAccordions from "../pages/Ui/UiTabsAccordions";
 import UiTypography from "../pages/Ui/UiTypography";
 import UiVideo from "../pages/Ui/UiVideo";
@@ -171,14 +170,28 @@ import Categories from "../pages/Categories/Categories";
 import AddCategory from "../pages/Categories/AddCategory";
 import AllCourses from "../pages/Courses/AllCourses";
 import AddCourses from "../pages/Courses/AddCourses";
-import Instructors from "../pages/Instructors/Instructors";
-import AddInstructor from "../pages/Instructors/AddInstructor";
 import Students from "../pages/Students/Students";
 import AddStudent from "../pages/Students/AddStudent";
+import Users from "../pages/Users/Users";
+import AddUsers from "../pages/Users/AddUsers";
 // import UiProgressbar from "../../src/pages/Ui/UiProgressbar"
 
 const authProtectedRoutes = [
   { path: "/dashboard", component: <Dashboard /> },
+  { path: "/profile", component: <UserProfile /> },
+  { path: "/all-categories", component: <Categories /> },
+  { path: "/categories/add", component: <AddCategory /> },
+  { path: "/users", component: <Users /> },
+  { path: "/users/add", component: <AddUsers /> },
+  { path: "/all-courses", component: <AllCourses /> },
+  { path: "/courses/add", component: <AddCourses /> },
+  { path: "/students", component: <Students /> },
+  { path: "/students/add", component: <AddStudent /> },
+
+
+
+
+
 
   //   //Crypto
   { path: "/crypto-wallet", component: <CryptoWallet /> },
@@ -189,14 +202,9 @@ const authProtectedRoutes = [
   { path: "/crypto-kyc-application", component: <CryptoKYCApplication /> },
 
   //chat
-  { path: "/all-categories", component: <Categories /> },
-  { path: "/categories/add", component: <AddCategory /> },
-  { path: "/all-courses", component: <AllCourses /> },
-  { path: "/courses/add", component: <AddCourses /> },
-  { path: "/instructor", component: <Instructors /> },
-  { path: "/instructor/add", component: <AddInstructor /> },
-  { path: "/students", component: <Students /> },
-  { path: "/students/add", component: <AddStudent /> },
+
+
+
 
   //File Manager
   { path: "/apps-filemanager", component: <FileManager /> },
@@ -205,7 +213,6 @@ const authProtectedRoutes = [
   { path: "/calendar", component: <Calendar /> },
 
   //   // //profile
-  { path: "/profile", component: <UserProfile /> },
 
   //   //Ecommerce
   {
@@ -366,4 +373,4 @@ const publicRoutes = [
 ];
 
 // export { authProtectedRoutes, publicRoutes };
-export { authProtectedRoutes, publicRoutes }
+export { authProtectedRoutes, publicRoutes };

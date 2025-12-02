@@ -18,7 +18,7 @@ import {
 
 const Login = () => {
   const navigate = useNavigate();
-  document.title = "Login | shekhai";
+  document.title = "Login | Shekhai";
 
   const [error, setError] = React.useState("");
 
@@ -29,18 +29,13 @@ const Login = () => {
       try {
         const parsed = JSON.parse(saved);
 
-        // Check if token exists and is not expired
         if (!parsed.token || Date.now() > parsed.expiresAt) {
           localStorage.removeItem("authUser");
-          navigate("/login");
         } else {
-          // Token exists and valid
           navigate("/dashboard");
         }
-      } catch (err) {
-        // Invalid localStorage data
+      } catch {
         localStorage.removeItem("authUser");
-        navigate("/login");
       }
     }
   }, [navigate]);
@@ -51,14 +46,11 @@ const Login = () => {
       password: "",
     },
     validationSchema: Yup.object({
-      email: Yup.string()
-        .email("Invalid email address")
-        .required("Please enter your email"),
-      password: Yup.string().required("Please enter your password"),
+      email: Yup.string().email("Invalid email").required("Enter your email"),
+      password: Yup.string().required("Enter your password"),
     }),
     onSubmit: async (values) => {
       setError("");
-
       try {
         const res = await axios.post(
           "https://shekhai-server.up.railway.app/api/v1/auth/login",
@@ -68,12 +60,12 @@ const Login = () => {
         const { token, user } = res.data;
 
         if (!token) {
-          setError("Login failed. Token not found.");
+          setError("Login failed: token not found.");
           return;
         }
 
-        // Store token + user for 2 hours
-        const expiresAt = Date.now() + 2 * 60 * 60 * 1000;
+        // 1 hour = 60 minutes * 60 seconds * 1000 milliseconds
+        const expiresAt = Date.now() + 1 * 60 * 60 * 1000;
 
         localStorage.setItem(
           "authUser",
@@ -95,15 +87,15 @@ const Login = () => {
       <Container>
         <Row className="justify-content-center">
           <Col md={8} lg={6} xl={5}>
-            <Card className="overflow-hidden">
-              <CardBody className="pt-0 p-4">
+            <Card className="overflow-hidden shadow-sm border-0">
+              <CardBody className="pt-5 p-4">
                 <h3 className="text-center text-primary mb-4">Login</h3>
 
                 <Form onSubmit={formik.handleSubmit}>
                   {error && <Alert color="danger">{error}</Alert>}
 
                   <div className="mb-3">
-                    <Label className="form-label">Email</Label>
+                    <Label>Email</Label>
                     <Input
                       name="email"
                       type="email"
@@ -111,15 +103,13 @@ const Login = () => {
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
                       value={formik.values.email}
-                      invalid={
-                        formik.touched.email && Boolean(formik.errors.email)
-                      }
+                      invalid={formik.touched.email && !!formik.errors.email}
                     />
                     <FormFeedback>{formik.errors.email}</FormFeedback>
                   </div>
 
                   <div className="mb-3">
-                    <Label className="form-label">Password</Label>
+                    <Label>Password</Label>
                     <Input
                       name="password"
                       type="password"
@@ -128,22 +118,15 @@ const Login = () => {
                       onBlur={formik.handleBlur}
                       value={formik.values.password}
                       invalid={
-                        formik.touched.password &&
-                        Boolean(formik.errors.password)
+                        formik.touched.password && !!formik.errors.password
                       }
                     />
                     <FormFeedback>{formik.errors.password}</FormFeedback>
                   </div>
 
                   <div className="form-check mb-3">
-                    <Input
-                      type="checkbox"
-                      className="form-check-input"
-                      id="rememberMe"
-                    />
-                    <Label className="form-check-label" htmlFor="rememberMe">
-                      Remember me
-                    </Label>
+                    <Input type="checkbox" id="rememberMe" />
+                    <Label htmlFor="rememberMe">Remember me</Label>
                   </div>
 
                   <div className="d-grid mb-3">
@@ -161,10 +144,8 @@ const Login = () => {
               </CardBody>
             </Card>
 
-            <div className="mt-5 text-center">
-              <p>
-                © {new Date().getFullYear()} shekhai. Crafted with ❤️ by NGen It
-              </p>
+            <div className="mt-5 text-center text-muted">
+              © {new Date().getFullYear()} Shekhai. Crafted with ❤️ by NGen IT
             </div>
           </Col>
         </Row>
