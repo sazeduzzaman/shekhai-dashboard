@@ -13,18 +13,25 @@ import userAvatar from "../../../assets/images/users/avatar-1.jpg";
 const ProfileMenu = ({ t, success }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [username, setUsername] = useState("Guest");
+  const [role, setRole] = useState(""); // <-- Role state added
 
   const navigate = useNavigate();
 
   useEffect(() => {
     const saved = localStorage.getItem("authUser");
+
     if (saved) {
       const parsed = JSON.parse(saved);
+
+      // Check expiry
       if (!parsed.expiresAt || Date.now() < parsed.expiresAt) {
         setUsername(parsed.user?.name || parsed.user?.email || "Guest");
+        setRole(parsed.user?.role || ""); // <-- Read role here
       } else {
+        // Expired token
         localStorage.removeItem("authUser");
         setUsername("Guest");
+        setRole("");
       }
     }
   }, [success]);
@@ -46,7 +53,10 @@ const ProfileMenu = ({ t, success }) => {
           src={userAvatar}
           alt="User Avatar"
         />
-        <span className="d-none d-xl-inline-block ms-2 me-1">{username}</span>
+        <span className="d-none d-xl-inline-block ms-2 me-1">
+          {username}{" "}
+          {role && <span className="text-muted">({role})</span>} {/* Show role */}
+        </span>
         <i className="mdi mdi-chevron-down d-none d-xl-inline-block" />
       </DropdownToggle>
 

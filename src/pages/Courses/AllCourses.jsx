@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Breadcrumbs from "../../components/Common/Breadcrumb";
 import { Link } from "react-router-dom";
 
@@ -9,15 +9,13 @@ const AllCourses = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // ⛔ Replace this with your auth system
-  const authUser = JSON.parse(localStorage.getItem("authUser")); 
+  // --------- AUTH ----------
+  const authUser = JSON.parse(localStorage.getItem("authUser"));
   const token = authUser?.token;
-  const userRole = authUser?.role; // "admin" or "instructor"
-  const userId = authUser?._id;
+  const userRole = authUser?.user?.role; // "admin" or "instructor"
+  const userId = authUser?.user?._id;
 
-  // ----------------------------
-  // ⭐ Fetch Courses from API
-  // ----------------------------
+  // --------- FETCH COURSES ----------
   const fetchCourses = async () => {
     try {
       const res = await fetch(
@@ -28,17 +26,14 @@ const AllCourses = () => {
           },
         }
       );
-
       const data = await res.json();
 
       if (data.success) {
         let filtered = data.courses;
 
-        // ⭐ Role-based filtering
+        // Instructor sees only their own courses
         if (userRole === "instructor") {
-          filtered = filtered.filter(
-            (c) => c.instructor?._id === userId
-          );
+          filtered = filtered.filter((c) => c.instructor?._id === userId);
         }
 
         setCourses(filtered);
@@ -54,9 +49,7 @@ const AllCourses = () => {
     fetchCourses();
   }, []);
 
-  // ----------------------------
-  // ⭐ Delete Course
-  // ----------------------------
+  // --------- DELETE COURSE ----------
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this course?")) return;
 
@@ -81,12 +74,11 @@ const AllCourses = () => {
       }
     } catch (err) {
       console.error("Delete Error:", err);
+      alert("Error deleting course.");
     }
   };
 
-  // ----------------------------
-  // ⭐ Search Filter
-  // ----------------------------
+  // --------- SEARCH FILTER ----------
   const filteredData = courses.filter((course) =>
     course.title.toLowerCase().includes(search.toLowerCase())
   );
@@ -96,9 +88,9 @@ const AllCourses = () => {
       <div className="container-fluid">
         <Breadcrumbs title="Courses" breadcrumbItem="All Courses" />
 
-        {/* Header */}
         <div className="card mb-3 shadow-none">
           <div className="card-header pt-4 d-flex justify-content-between align-items-center bg-white">
+            {/* Search */}
             <div style={{ width: "280px" }}>
               <input
                 type="text"
@@ -109,15 +101,12 @@ const AllCourses = () => {
               />
             </div>
 
-            {(userRole === "admin" || userRole === "instructor") && (
-              <Link to="/courses/add" className="btn btn-success">
-                <i className="mdi mdi-plus me-1"></i>
-                Add Course
-              </Link>
-            )}
+            <Link to="/courses/add" className="btn btn-success">
+              <i className="mdi mdi-plus me-1"></i>
+              Add Course
+            </Link>
           </div>
 
-          {/* Table */}
           <div className="card-body pt-0">
             {loading ? (
               <p className="text-center mt-3">Loading...</p>
@@ -168,15 +157,22 @@ const AllCourses = () => {
                               <i className="mdi mdi-eye"></i>
                             </Link>
 
-                            <Link
-                              to={`/courses/edit/${item._id}`}
-                              className="btn btn-sm btn-warning"
-                            >
-                              <i className="mdi mdi-pencil"></i>
-                            </Link>
-
+                            {/* Edit Button */}
                             {(userRole === "admin" ||
-                              item.instructor?._id === userId) && (
+                              (userRole === "instructor" &&
+                                item.instructor?._id === userId)) && (
+                              <Link
+                                to={`/courses/edit/${item._id}`}
+                                className="btn btn-sm btn-warning"
+                              >
+                                <i className="mdi mdi-pencil"></i>
+                              </Link>
+                            )}
+
+                            {/* Delete Button */}
+                            {(userRole === "admin" ||
+                              (userRole === "instructor" &&
+                                item.instructor?._id === userId)) && (
                               <button
                                 className="btn btn-sm btn-danger"
                                 onClick={() => handleDelete(item._id)}

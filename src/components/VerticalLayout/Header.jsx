@@ -2,13 +2,10 @@ import PropTypes from "prop-types";
 import { useState } from "react";
 import { connect } from "react-redux";
 import { Link } from "react-router-dom";
-
 import NotificationDropdown from "../CommonForBoth/TopbarDropdown/NotificationDropdown";
 import ProfileMenu from "../CommonForBoth/TopbarDropdown/ProfileMenu";
-
 import logoMain from "/images/logo.webp";
 import logoLightSvg from "/images/logo.webp";
-
 // i18n
 import { withTranslation } from "react-i18next";
 
@@ -126,7 +123,6 @@ const Header = ({ t }) => {
               </form>
             </div>
           </div>
-
           <div className="dropdown d-none d-lg-inline-block ms-1">
             <button
               type="button"
@@ -137,7 +133,6 @@ const Header = ({ t }) => {
               <i className="bx bx-fullscreen" />
             </button>
           </div>
-
           <NotificationDropdown />
           <ProfileMenu />
         </div>
