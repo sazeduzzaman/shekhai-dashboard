@@ -51,7 +51,7 @@ const WelcomeComp = () => {
                 </Row>
                 <div className="mt-4">
                   <Link
-                    to=""
+                    to="/profile"
                     className="btn btn-primary  btn-sm"
                   >
                     View Profile <i className="mdi mdi-arrow-right ms-1"></i>

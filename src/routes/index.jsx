@@ -4,7 +4,7 @@ import { Navigate } from "react-router-dom";
 import FileManager from "../pages/FileManager/index";
 
 // // Profile
-import UserProfile from "../pages/Authentication/user-profile";
+import UserProfile from "../pages/Authentication/UserProfile";
 
 // Pages Calendar
 import Calendar from "../pages/Calendar/index";
@@ -174,6 +174,7 @@ import Students from "../pages/Students/Students";
 import AddStudent from "../pages/Students/AddStudent";
 import Users from "../pages/Users/Users";
 import AddUsers from "../pages/Users/AddUsers";
+import AllNotification from "../pages/AllNotification/AllNotification";
 // import UiProgressbar from "../../src/pages/Ui/UiProgressbar"
 
 const authProtectedRoutes = [
@@ -187,11 +188,7 @@ const authProtectedRoutes = [
   { path: "/courses/add", component: <AddCourses /> },
   { path: "/students", component: <Students /> },
   { path: "/students/add", component: <AddStudent /> },
-
-
-
-
-
+  { path: "/all-notification", component: <AllNotification /> },
 
   //   //Crypto
   { path: "/crypto-wallet", component: <CryptoWallet /> },
@@ -202,9 +199,6 @@ const authProtectedRoutes = [
   { path: "/crypto-kyc-application", component: <CryptoKYCApplication /> },
 
   //chat
-
-
-
 
   //File Manager
   { path: "/apps-filemanager", component: <FileManager /> },

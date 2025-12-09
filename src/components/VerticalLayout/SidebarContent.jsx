@@ -3,16 +3,21 @@ import React, { useEffect, useRef, useCallback } from "react";
 import SimpleBar from "simplebar-react";
 import MetisMenu from "metismenujs";
 import { Link, useLocation } from "react-router-dom";
-import withRouter from "../Common/withRouter";
 import { withTranslation } from "react-i18next";
+
+// Make sure to import these in your App or index.js
+// import 'simplebar-react/dist/simplebar.min.css';
+// import 'metismenujs/dist/metismenujs.css';
+// import 'boxicons/css/boxicons.min.css';
+// import 'bootstrap/dist/css/bootstrap.min.css';
 
 const SidebarContent = ({ t }) => {
   const ref = useRef();
   const location = useLocation();
 
-  // Get user role from localStorage (or your auth provider)
-  const userRole =
-    JSON.parse(localStorage.getItem("authUser"))?.role || "instructor";
+  // Get user role from localStorage
+  const auth = JSON.parse(localStorage.getItem("authUser"));
+  const userRole = auth?.user?.role || "instructor";
 
   const scrollElement = (item) => {
     if (item) {
@@ -27,7 +32,6 @@ const SidebarContent = ({ t }) => {
     if (!item) return;
 
     item.classList.add("active");
-
     let parent = item.parentElement;
 
     while (parent && parent.id !== "side-menu") {
@@ -39,7 +43,6 @@ const SidebarContent = ({ t }) => {
         const link = parent.childNodes[0];
         if (link) link.classList.add("mm-active");
       }
-
       parent = parent.parentElement;
     }
 
@@ -47,30 +50,25 @@ const SidebarContent = ({ t }) => {
   }, []);
 
   const removeActivation = (items) => {
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
+    Array.from(items).forEach((item) => {
       const parent = item.parentElement;
-
       item.classList.remove("active");
 
       if (parent) {
-        const childMenu =
-          parent.childNodes?.length > 1 ? parent.childNodes[1] : null;
+        const childMenu = parent.childNodes?.length > 1 ? parent.childNodes[1] : null;
         if (childMenu && childMenu.id !== "side-menu") {
           childMenu.classList.remove("mm-show");
         }
-
         parent.classList.remove("mm-active");
 
         let ancestor = parent.parentElement;
         while (ancestor && ancestor.id !== "side-menu") {
           ancestor.classList.remove("mm-show", "mm-active");
-          if (ancestor.childNodes[0])
-            ancestor.childNodes[0].classList.remove("mm-active");
+          if (ancestor.childNodes[0]) ancestor.childNodes[0].classList.remove("mm-active");
           ancestor = ancestor.parentElement;
         }
       }
-    }
+    });
   };
 
   const activeMenu = useCallback(() => {
@@ -84,9 +82,8 @@ const SidebarContent = ({ t }) => {
     const matchingMenuItem = Array.from(items).find(
       (item) => item.pathname === pathName
     );
-    if (matchingMenuItem) {
-      activateParentDropdown(matchingMenuItem);
-    }
+
+    if (matchingMenuItem) activateParentDropdown(matchingMenuItem);
   }, [location.pathname, activateParentDropdown]);
 
   useEffect(() => {
@@ -105,7 +102,7 @@ const SidebarContent = ({ t }) => {
   }, [activeMenu]);
 
   return (
-    <SimpleBar className="h-100" ref={ref}>
+    <SimpleBar style={{ maxHeight: "100vh" }} ref={ref}>
       <div id="sidebar-menu">
         <ul className="metismenu list-unstyled" id="side-menu">
           {/* Dashboard */}
@@ -215,4 +212,4 @@ SidebarContent.propTypes = {
   t: PropTypes.func,
 };
 
-export default withRouter(withTranslation()(SidebarContent));
+export default withTranslation()(SidebarContent);
