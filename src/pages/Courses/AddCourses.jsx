@@ -1,58 +1,192 @@
-import { useFormik } from "formik";
-import * as Yup from "yup";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { toast, Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import Breadcrumbs from "../../components/Common/Breadcrumb";
 import Select from "react-select";
+import axios from "axios";
+import Breadcrumbs from "../../components/Common/Breadcrumb";
+
+const statusOptions = [
+  { value: true, label: "Published" },
+  { value: false, label: "Unpublished" },
+];
 
 const AddCourses = () => {
   const navigate = useNavigate();
-  document.title = "Add Course | LMS Dashboard";
-
-  const formik = useFormik({
-    initialValues: {
-      title: "",
-      shortDescription: "",
-      longDescription: "",
-      instructor: "",
-      price: "",
-      category: null,
-      level: "Beginner",
-      totalModules: "",
-      totalDuration: "",
-      enrollmentDeadline: "",
-      published: true,
-    },
-    validationSchema: Yup.object({
-      title: Yup.string().min(2, "Too short").required("Required"),
-      shortDescription: Yup.string().required("Required"),
-      longDescription: Yup.string().required("Required"),
-      instructor: Yup.string().min(2, "Too short").required("Required"),
-      price: Yup.number().typeError("Must be a number").required("Required"),
-      category: Yup.object().required("Required"),
-      level: Yup.string().oneOf(["Beginner", "Intermediate", "Advanced"]),
-      totalModules: Yup.number()
-        .typeError("Must be a number")
-        .required("Required"),
-      totalDuration: Yup.number()
-        .typeError("Must be a number")
-        .required("Required"),
-      enrollmentDeadline: Yup.date()
-        .typeError("Invalid date")
-        .required("Required"),
-    }),
-    onSubmit: (values, { resetForm }) => {
-      console.log("Course Submitted:", values);
-      alert("Course added successfully!");
-      resetForm();
-    },
+  const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [instructors, setInstructors] = useState([]);
+  const [form, setForm] = useState({
+    title: "",
+    shortDescription: "",
+    longDescription: "",
+    instructor: null,
+    price: "",
+    category: null,
+    level: "Beginner",
+    enrollmentDeadline: "",
+    published: false,
   });
+  const [modules, setModules] = useState([
+    { title: "", description: "", videoUrl: "", duration: "" },
+  ]);
+
+  // Fetch categories & instructors with token
+  useEffect(() => {
+    document.title = "Add Course | LMS Dashboard";
+    const stored = localStorage.getItem("authUser");
+    const token = stored ? JSON.parse(stored)?.token : null;
+    if (!token) return toast.error("You are not logged in.");
+
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get(
+          "https://shekhai-server.up.railway.app/api/v1/categories",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const options = res.data.categories.map((cat) => ({
+          value: cat._id,
+          label: cat.name,
+        }));
+        setCategories(options);
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to fetch categories.");
+      }
+    };
+
+    const fetchInstructors = async () => {
+      try {
+        const res = await axios.get(
+          "https://shekhai-server.up.railway.app/api/v1/users?role=instructor",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const options = res.data.users.map((user) => ({
+          value: user._id,
+          label: user.name,
+        }));
+        setInstructors(options);
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to fetch instructors.");
+      }
+    };
+
+    fetchCategories();
+    fetchInstructors();
+  }, []);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleModuleChange = (index, field, value) => {
+    const updated = [...modules];
+    updated[index][field] = value;
+    setModules(updated);
+  };
+
+  const addModule = () =>
+    setModules((prev) => [
+      ...prev,
+      { title: "", description: "", videoUrl: "", duration: "" },
+    ]);
+  const removeModule = (index) =>
+    setModules((prev) => prev.filter((_, i) => i !== index));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const stored = localStorage.getItem("authUser");
+    const token = stored ? JSON.parse(stored)?.token : null;
+    if (!token) {
+      toast.error("You are not logged in.");
+      setLoading(false);
+      return;
+    }
+
+    if (!form.instructor || !form.category) {
+      toast.error("Instructor and Category are required.");
+      setLoading(false);
+      return;
+    }
+
+    const payload = {
+      title: form.title.trim(),
+      shortDescription: form.shortDescription.trim(),
+      longDescription: form.longDescription.trim(),
+      instructor: form.instructor.value,
+      price: Number(form.price),
+      category: form.category.value,
+      level: form.level,
+      enrollmentDeadline: form.enrollmentDeadline,
+      published: Boolean(form.published),
+      modules: modules.map((m) => ({
+        title: m.title.trim(),
+        description: m.description.trim(),
+        videoUrl: m.videoUrl.trim(),
+        duration: Number(m.duration),
+      })),
+    };
+
+    console.log("Submitting JSON payload:", JSON.stringify(payload, null, 2));
+
+    try {
+      const res = await axios.post(
+        "https://shekhai-server.up.railway.app/api/v1/courses",
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (res.status === 201 && res.data?.success) {
+        toast.success("Course added successfully!");
+        setForm({
+          title: "",
+          shortDescription: "",
+          longDescription: "",
+          instructor: null,
+          price: "",
+          category: null,
+          level: "Beginner",
+          enrollmentDeadline: "",
+          published: false,
+        });
+        setModules([
+          { title: "", description: "", videoUrl: "", duration: "" },
+        ]);
+      } else {
+        toast.error(res.data?.msg || "Course not added");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.msg || "Failed to add course");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="container my-5">
       <Breadcrumbs title="Courses" breadcrumbItem="Add Course" />
-
       <div className="card shadow-sm rounded-4 p-4">
-        {/* Header */}
         <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
           <div>
             <h3 className="text-primary mb-1">Add New Course</h3>
@@ -68,109 +202,72 @@ const AddCourses = () => {
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={formik.handleSubmit}>
+        <form onSubmit={handleSubmit}>
           <div className="row g-3">
-            {/* Title & Instructor */}
+            {/* Title */}
             <div className="col-md-6">
               <label className="form-label">Course Title</label>
               <input
                 type="text"
-                className={`form-control ${
-                  formik.touched.title && formik.errors.title
-                    ? "is-invalid"
-                    : ""
-                }`}
+                className="form-control"
                 name="title"
-                value={formik.values.title}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
+                value={form.title}
+                onChange={handleChange}
                 placeholder="Enter course title"
+                required
               />
-              {formik.touched.title && formik.errors.title && (
-                <div className="invalid-feedback">{formik.errors.title}</div>
-              )}
             </div>
 
+            {/* Instructor */}
             <div className="col-md-6">
               <label className="form-label">Instructor</label>
-              <input
-                type="text"
-                className={`form-control ${
-                  formik.touched.instructor && formik.errors.instructor
-                    ? "is-invalid"
-                    : ""
-                }`}
-                name="instructor"
-                value={formik.values.instructor}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                placeholder="Enter instructor name"
+              <Select
+                value={form.instructor}
+                onChange={(val) =>
+                  setForm((prev) => ({ ...prev, instructor: val }))
+                }
+                options={instructors}
+                placeholder="Select Instructor..."
+                isClearable
               />
-              {formik.touched.instructor && formik.errors.instructor && (
-                <div className="invalid-feedback">
-                  {formik.errors.instructor}
-                </div>
-              )}
             </div>
 
-            {/* Price & Category */}
+            {/* Price */}
             <div className="col-md-6">
               <label className="form-label">Price ($)</label>
               <input
                 type="number"
-                className={`form-control ${
-                  formik.touched.price && formik.errors.price
-                    ? "is-invalid"
-                    : ""
-                }`}
+                className="form-control"
                 name="price"
-                value={formik.values.price}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                placeholder="Enter course price"
+                value={form.price}
+                onChange={handleChange}
+                min="0"
+                required
               />
-              {formik.touched.price && formik.errors.price && (
-                <div className="invalid-feedback">{formik.errors.price}</div>
-              )}
             </div>
 
+            {/* Category */}
             <div className="col-md-6">
               <label className="form-label">Category</label>
               <Select
-                name="category"
-                value={formik.values.category}
-                onChange={(value) => formik.setFieldValue("category", value)}
-                onBlur={formik.handleBlur}
-                options={[
-                  { value: "UI-UX Design", label: "UI-UX Design" },
-                  { value: "Web Development", label: "Web Development" },
-                  { value: "Programming", label: "Programming" },
-                  {
-                    value: "Backend Development",
-                    label: "Backend Development",
-                  },
-                  { value: "Marketing", label: "Marketing" },
-                ]}
+                value={form.category}
+                onChange={(val) =>
+                  setForm((prev) => ({ ...prev, category: val }))
+                }
+                options={categories}
+                placeholder="Select Category..."
+                isClearable
               />
-              {formik.touched.category && formik.errors.category && (
-                <div
-                  className="text-danger mt-1"
-                  style={{ fontSize: "0.875em" }}
-                >
-                  {formik.errors.category}
-                </div>
-              )}
             </div>
 
-            {/* Level & Total Modules */}
+            {/* Level */}
             <div className="col-md-6">
               <label className="form-label">Level</label>
               <select
                 className="form-select"
                 name="level"
-                value={formik.values.level}
-                onChange={formik.handleChange}
+                value={form.level}
+                onChange={handleChange}
               >
                 <option value="Beginner">Beginner</option>
                 <option value="Intermediate">Intermediate</option>
@@ -178,146 +275,131 @@ const AddCourses = () => {
               </select>
             </div>
 
+            {/* Enrollment Deadline */}
             <div className="col-md-6">
-              <label className="form-label">Total Modules</label>
-              <input
-                type="number"
-                className={`form-control ${
-                  formik.touched.totalModules && formik.errors.totalModules
-                    ? "is-invalid"
-                    : ""
-                }`}
-                name="totalModules"
-                value={formik.values.totalModules}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                placeholder="Enter total modules"
-              />
-              {formik.touched.totalModules && formik.errors.totalModules && (
-                <div className="invalid-feedback">
-                  {formik.errors.totalModules}
-                </div>
-              )}
-            </div>
-
-            {/* Total Duration & Enrollment Deadline */}
-            <div className="col-md-4">
-              <label className="form-label">Total Duration (mins)</label>
-              <input
-                type="number"
-                className={`form-control ${
-                  formik.touched.totalDuration && formik.errors.totalDuration
-                    ? "is-invalid"
-                    : ""
-                }`}
-                name="totalDuration"
-                value={formik.values.totalDuration}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                placeholder="Enter total duration"
-              />
-              {formik.touched.totalDuration && formik.errors.totalDuration && (
-                <div className="invalid-feedback">
-                  {formik.errors.totalDuration}
-                </div>
-              )}
-            </div>
-            {/* Status */}
-            <div className="col-md-4">
-              <label className="form-label">Status</label>
-              <Select
-                name="published"
-                value={formik.values.published}
-                onChange={(value) => formik.setFieldValue("published", value)}
-                onBlur={formik.handleBlur}
-                options={[
-                  { value: true, label: "Published" },
-                  { value: false, label: "Unpublished" },
-                ]}
-              />
-            </div>
-
-            <div className="col-md-4">
               <label className="form-label">Enrollment Deadline</label>
               <input
                 type="date"
-                className={`form-control ${
-                  formik.touched.enrollmentDeadline &&
-                  formik.errors.enrollmentDeadline
-                    ? "is-invalid"
-                    : ""
-                }`}
+                className="form-control"
                 name="enrollmentDeadline"
-                value={formik.values.enrollmentDeadline}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
+                value={form.enrollmentDeadline}
+                onChange={handleChange}
+                required
               />
-              {formik.touched.enrollmentDeadline &&
-                formik.errors.enrollmentDeadline && (
-                  <div className="invalid-feedback">
-                    {formik.errors.enrollmentDeadline}
-                  </div>
-                )}
+            </div>
+
+            {/* Modules */}
+            <div className="col-12">
+              <label className="form-label">Modules</label>
+              {modules.map((mod, index) => (
+                <div key={index} className="mb-3 p-2 border rounded">
+                  <input
+                    type="text"
+                    placeholder="Module Title"
+                    value={mod.title}
+                    onChange={(e) =>
+                      handleModuleChange(index, "title", e.target.value)
+                    }
+                    className="form-control mb-1"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Module Description"
+                    value={mod.description}
+                    onChange={(e) =>
+                      handleModuleChange(index, "description", e.target.value)
+                    }
+                    className="form-control mb-1"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Video URL"
+                    value={mod.videoUrl}
+                    onChange={(e) =>
+                      handleModuleChange(index, "videoUrl", e.target.value)
+                    }
+                    className="form-control mb-1"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Duration (mins)"
+                    value={mod.duration}
+                    onChange={(e) =>
+                      handleModuleChange(index, "duration", e.target.value)
+                    }
+                    className="form-control mb-1"
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm mt-1"
+                    onClick={() => removeModule(index)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={addModule}
+              >
+                Add Module
+              </button>
+            </div>
+
+            {/* Status */}
+            <div className="col-md-6">
+              <label className="form-label">Status</label>
+              <Select
+                value={statusOptions.find((s) => s.value === form.published)}
+                onChange={(val) =>
+                  setForm((prev) => ({ ...prev, published: val.value }))
+                }
+                options={statusOptions}
+                isClearable={false}
+              />
             </div>
 
             {/* Short Description */}
             <div className="col-12">
               <label className="form-label">Short Description</label>
               <textarea
-                className={`form-control ${
-                  formik.touched.shortDescription &&
-                  formik.errors.shortDescription
-                    ? "is-invalid"
-                    : ""
-                }`}
+                className="form-control"
                 name="shortDescription"
-                value={formik.values.shortDescription}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                placeholder="Enter short description"
+                value={form.shortDescription}
+                onChange={handleChange}
                 rows={2}
+                required
               />
-              {formik.touched.shortDescription &&
-                formik.errors.shortDescription && (
-                  <div className="invalid-feedback">
-                    {formik.errors.shortDescription}
-                  </div>
-                )}
             </div>
 
             {/* Long Description */}
             <div className="col-12">
               <label className="form-label">Long Description</label>
               <textarea
-                className={`form-control ${
-                  formik.touched.longDescription &&
-                  formik.errors.longDescription
-                    ? "is-invalid"
-                    : ""
-                }`}
+                className="form-control"
                 name="longDescription"
-                value={formik.values.longDescription}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                placeholder="Enter long description"
+                value={form.longDescription}
+                onChange={handleChange}
                 rows={4}
+                required
               />
-              {formik.touched.longDescription &&
-                formik.errors.longDescription && (
-                  <div className="invalid-feedback">
-                    {formik.errors.longDescription}
-                  </div>
-                )}
             </div>
           </div>
 
           <div className="mt-4">
-            <button className="btn btn-primary px-4" type="submit">
-              Add Course
+            <button
+              className="btn btn-primary px-4"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Add Course"}
             </button>
           </div>
         </form>
       </div>
+
+      <Toaster position="top-right" />
     </div>
   );
 };
