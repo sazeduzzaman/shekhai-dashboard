@@ -19,7 +19,7 @@ const AllCourses = () => {
   const fetchCourses = async () => {
     try {
       const res = await fetch(
-        "http://localhost:8080/api/v1/courses",
+        "https://shekhai-server.up.railway.app/api/v1/courses",
         {
           headers: {
             Authorization: `Bearer ${token}`,
