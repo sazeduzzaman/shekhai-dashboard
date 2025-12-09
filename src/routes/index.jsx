@@ -175,6 +175,7 @@ import AddStudent from "../pages/Students/AddStudent";
 import Users from "../pages/Users/Users";
 import AddUsers from "../pages/Users/AddUsers";
 import AllNotification from "../pages/AllNotification/AllNotification";
+import Settings from "../pages/Settings/Settings";
 // import UiProgressbar from "../../src/pages/Ui/UiProgressbar"
 
 const authProtectedRoutes = [
@@ -189,6 +190,7 @@ const authProtectedRoutes = [
   { path: "/students", component: <Students /> },
   { path: "/students/add", component: <AddStudent /> },
   { path: "/all-notification", component: <AllNotification /> },
+  { path: "/settings", component: <Settings /> },
 
   //   //Crypto
   { path: "/crypto-wallet", component: <CryptoWallet /> },
@@ -202,13 +204,7 @@ const authProtectedRoutes = [
 
   //File Manager
   { path: "/apps-filemanager", component: <FileManager /> },
-
-  // //calendar
   { path: "/calendar", component: <Calendar /> },
-
-  //   // //profile
-
-  //   //Ecommerce
   {
     path: "/ecommerce-product-detail/:id",
     component: <EcommerceProductDetail />,

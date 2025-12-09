@@ -7,5 +7,6 @@ export default defineConfig({
   esbuild: {
     jsxFactory: 'h',
     jsxFragment: 'Fragment',
-  }
+  },
+  base: './', // ensures relative paths for production build
 })

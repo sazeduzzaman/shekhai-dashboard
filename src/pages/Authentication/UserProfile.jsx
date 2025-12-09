@@ -34,7 +34,7 @@ const UserProfile = () => {
           return;
         }
 
-        const res = await axios.get("http://localhost:8080/api/v1/users/me", {
+        const res = await axios.get("https://shekhai-server.up.railway.app/api/v1/users/me", {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -92,7 +92,7 @@ const UserProfile = () => {
                       user.avatarUrl ||
                       "https://themesbrand.com/skote/layouts/assets/images/profile-img.png"
                     }
-                    alt="User Avatar"
+                    alt="User"
                     className="rounded-circle img-thumbnail"
                     style={{
                       width: "100px",

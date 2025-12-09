@@ -39,10 +39,10 @@ const NotificationDropdown = props => {
                 <h6 className="m-0"> {props.t("Notifications")} </h6>
               </Col>
               <div className="col-auto">
-                <a href="#!" className="small">
+               <Link to="/all-notification" className="small">
                   {" "}
                   View All
-                </a>
+                </Link>
               </div>
             </Row>
           </div>

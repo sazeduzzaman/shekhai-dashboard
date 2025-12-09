@@ -13,19 +13,50 @@ import {
   InputGroup,
   InputGroupText,
 } from "reactstrap";
-import { Eye, EyeSlash } from "react-bootstrap-icons"; // react-bootstrap-icons
-import toast from "react-hot-toast"; // <-- import toast
+import { Eye, EyeSlash } from "react-bootstrap-icons";
+import toast from "react-hot-toast";
 
 const EditProfileForm = ({ user, setUser }) => {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [bio, setBio] = useState(user.bio || "");
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl || "");
+  const [avatarFile, setAvatarFile] = useState(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
+
+  // Upload file to server and get URL
+  const uploadFile = async () => {
+    if (!avatarFile) return avatarUrl;
+
+    const auth = JSON.parse(localStorage.getItem("authUser"));
+    const token = auth?.token;
+
+    const formData = new FormData();
+    formData.append("file", avatarFile);
+    formData.append("folder", "users");
+
+    try {
+      const res = await axios.post(
+        "https://shekhai-server.up.railway.app/api/v1/uploads",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return res.data.fileUrl;
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to upload avatar image");
+      return avatarUrl;
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,13 +65,16 @@ const EditProfileForm = ({ user, setUser }) => {
     if (!email.trim()) return toast.error("Email is required!");
 
     setLoading(true);
-
     try {
       const auth = JSON.parse(localStorage.getItem("authUser"));
       const token = auth?.token;
       if (!token) throw new Error("You are not authenticated");
 
-      const payload = { name, email, bio, avatarUrl };
+      // 1️⃣ Upload avatar if new file selected
+      const uploadedUrl = await uploadFile();
+
+      // 2️⃣ Prepare payload for profile update
+      const payload = { name, email, bio, avatarUrl: uploadedUrl };
       if (newPassword) {
         if (!currentPassword) {
           setLoading(false);
@@ -50,8 +84,9 @@ const EditProfileForm = ({ user, setUser }) => {
         payload.newPassword = newPassword;
       }
 
+      // 3️⃣ Send update request
       const res = await axios.put(
-        "http://localhost:8080/api/v1/users/me",
+        "https://shekhai-server.up.railway.app/api/v1/users/me",
         payload,
         {
           headers: {
@@ -84,7 +119,7 @@ const EditProfileForm = ({ user, setUser }) => {
   return (
     <Card className="shadow-sm">
       <CardBody>
-        <CardTitle className="mb-4">Edit Or Update Profile</CardTitle>
+        <CardTitle className="mb-4">Edit Profile</CardTitle>
 
         <Form onSubmit={handleSubmit}>
           <div className="row">
@@ -113,12 +148,29 @@ const EditProfileForm = ({ user, setUser }) => {
             </div>
 
             <div className="col-lg-12 mb-3">
-              <Label>Avatar URL</Label>
+              <Label>Avatar Image</Label>
               <Input
-                type="text"
-                value={avatarUrl}
-                placeholder="https://example.com/avatar.jpg"
-                onChange={(e) => setAvatarUrl(e.target.value)}
+                type="file"
+                accept="image/*"
+                onChange={(e) => setAvatarFile(e.target.files[0])}
+              />
+              {avatarUrl && !avatarFile && (
+                <img
+                  src={avatarUrl}
+                  alt="avatar"
+                  style={{ width: 80, height: 80, marginTop: 10, borderRadius: 8 }}
+                />
+              )}
+            </div>
+
+            <div className="col-lg-12 mb-3">
+              <Label>Bio</Label>
+              <Input
+                type="textarea"
+                rows="3"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Write something about yourself..."
               />
             </div>
 
@@ -156,17 +208,6 @@ const EditProfileForm = ({ user, setUser }) => {
                   {showNew ? <EyeSlash /> : <Eye />}
                 </InputGroupText>
               </InputGroup>
-            </div>
-
-            <div className="col-lg-12 mb-3">
-              <Label>Bio</Label>
-              <Input
-                type="textarea"
-                rows="3"
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="Write something about yourself..."
-              />
             </div>
           </div>
 
