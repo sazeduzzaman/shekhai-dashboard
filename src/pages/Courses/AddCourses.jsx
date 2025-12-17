@@ -24,7 +24,7 @@ const AddCourses = () => {
     title: "",
     shortDescription: "",
     longDescription: "",
-    instructor: null, // Will be set based on user role
+    instructor: null,
     price: "",
     category: null,
     level: "Beginner",
@@ -46,77 +46,128 @@ const AddCourses = () => {
   useEffect(() => {
     document.title = "Add Course | LMS Dashboard";
     const stored = localStorage.getItem("authUser");
-    const token = stored ? JSON.parse(stored)?.token : null;
-
-    if (!token) {
+    console.log("LocalStorage authUser:", stored); // Debug log
+    
+    if (!stored) {
       toast.error("You are not logged in.");
       navigate("/login");
       return;
     }
 
-    // Get user info from local storage
-    const user = JSON.parse(stored);
-    setUserRole(user?.role);
-    setUserId(user?.id);
+    try {
+      const authData = JSON.parse(stored);
+      console.log("Parsed authData:", authData); // Debug log
+      
+      const token = authData?.token;
+      
+      if (!token) {
+        toast.error("Invalid session token.");
+        navigate("/login");
+        return;
+      }
 
-    const fetchData = async () => {
-      try {
-        // Fetch categories (always needed)
-        const categoriesRes = await axios.get(
-          "https://shekhai-server.up.railway.app/api/v1/categories",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+      // Get user info from the nested user object
+      const user = authData?.user;
+      console.log("User object:", user); // Debug log
+      
+      if (!user) {
+        toast.error("User data not found.");
+        navigate("/login");
+        return;
+      }
 
-        const categoryOptions =
-          categoriesRes.data.categories?.map((cat) => ({
-            value: cat._id,
-            label: cat.name,
-          })) || [];
+      const role = user?.role;
+      const id = user?.id;
+      
+      console.log("Setting userRole:", role, "userId:", id); // Debug log
+      setUserRole(role);
+      setUserId(id);
 
-        setCategories(categoryOptions);
-
-        // Only fetch instructors if user is ADMIN
-        if (user?.role === "admin") {
-          const instructorsRes = await axios.get(
-            "https://shekhai-server.up.railway.app/api/v1/users?role=instructor",
+      const fetchData = async () => {
+        try {
+          // Fetch categories (always needed)
+          const categoriesRes = await axios.get(
+            "https://shekhai-server.up.railway.app/api/v1/categories",
             { headers: { Authorization: `Bearer ${token}` } }
           );
 
-          const instructorOptions =
-            instructorsRes.data.users?.map((user) => ({
-              value: user._id,
-              label: user.name,
+          const categoryOptions =
+            categoriesRes.data.categories?.map((cat) => ({
+              value: cat._id,
+              label: cat.name,
             })) || [];
 
-          setInstructors(instructorOptions);
-        }
+          setCategories(categoryOptions);
 
-        // If user is instructor, auto-set their ID
-        if (user?.role === "instructor" && user?.id) {
-          setForm((prev) => ({
-            ...prev,
-            instructor: {
-              value: user.id,
-              label: user.name || "You",
-            },
-          }));
-        }
-      } catch (err) {
-        console.error("Fetch error:", err);
-        if (err.response?.status === 401) {
-          localStorage.removeItem("authUser");
-          navigate("/login");
-        }
-        toast.error("Failed to fetch data.");
-      }
-    };
+          // Only fetch instructors if user is ADMIN
+          if (role === "admin") {
+            try {
+              console.log("Fetching instructors as admin..."); // Debug log
+              const instructorsRes = await axios.get(
+                "https://shekhai-server.up.railway.app/api/v1/users?role=instructor",
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
 
-    fetchData();
+              console.log("Instructors API response:", instructorsRes.data); // Debug log
+              
+              const instructorOptions =
+                instructorsRes.data.users?.map((instructor) => ({
+                  value: instructor._id,
+                  label: instructor.name,
+                })) || [];
+
+              console.log("Instructor options:", instructorOptions); // Debug log
+              setInstructors(instructorOptions);
+            } catch (instructorErr) {
+              console.error("Error fetching instructors:", instructorErr);
+              if (instructorErr.response) {
+                console.error("Response status:", instructorErr.response.status);
+                console.error("Response data:", instructorErr.response.data);
+              }
+              toast.error("Failed to fetch instructors list.");
+            }
+          }
+
+          // If user is instructor, auto-set their ID
+          if (role === "instructor" && id) {
+            setForm((prev) => ({
+              ...prev,
+              instructor: {
+                value: id,
+                label: user.name || "You",
+              },
+            }));
+          }
+        } catch (err) {
+          console.error("Fetch error:", err);
+          if (err.response) {
+            console.error("Response status:", err.response.status);
+            console.error("Response data:", err.response.data);
+          }
+          if (err.response?.status === 401) {
+            localStorage.removeItem("authUser");
+            navigate("/login");
+          }
+          toast.error("Failed to fetch data.");
+        }
+      };
+
+      fetchData();
+    } catch (parseErr) {
+      console.error("Error parsing localStorage data:", parseErr);
+      toast.error("Invalid session data.");
+      localStorage.removeItem("authUser");
+      navigate("/login");
+    }
   }, [navigate]);
 
   // Handle form field changes
   const handleChange = (e) => {
     const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (name, value) => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -174,36 +225,48 @@ const AddCourses = () => {
     setLoading(true);
 
     const stored = localStorage.getItem("authUser");
-    const token = stored ? JSON.parse(stored)?.token : null;
-
-    if (!token) {
+    if (!stored) {
       toast.error("You are not logged in.");
       setLoading(false);
       navigate("/login");
       return;
     }
 
-    // Validation
-    if (!form.category) {
-      toast.error("Category is required.");
-      setLoading(false);
-      return;
-    }
-
-    if (!form.title.trim()) {
-      toast.error("Course title is required.");
-      setLoading(false);
-      return;
-    }
-
-    // Additional validation for admin
-    if (userRole === "admin" && !form.instructor) {
-      toast.error("Instructor is required for admin.");
-      setLoading(false);
-      return;
-    }
-
     try {
+      const authData = JSON.parse(stored);
+      const token = authData?.token;
+      const user = authData?.user;
+      
+      if (!token || !user) {
+        toast.error("Invalid session data.");
+        setLoading(false);
+        navigate("/login");
+        return;
+      }
+
+      const role = user?.role;
+      const id = user?.id;
+
+      // Validation
+      if (!form.category) {
+        toast.error("Category is required.");
+        setLoading(false);
+        return;
+      }
+
+      if (!form.title.trim()) {
+        toast.error("Course title is required.");
+        setLoading(false);
+        return;
+      }
+
+      // Additional validation for admin
+      if (role === "admin" && !form.instructor) {
+        toast.error("Instructor is required for admin.");
+        setLoading(false);
+        return;
+      }
+
       // Create FormData
       const formData = new FormData();
 
@@ -213,9 +276,9 @@ const AddCourses = () => {
       formData.append("longDescription", form.longDescription);
 
       // For instructors, use their own ID; for admins, use selected instructor
-      if (userRole === "instructor") {
-        formData.append("instructor", userId);
-      } else if (userRole === "admin" && form.instructor) {
+      if (role === "instructor") {
+        formData.append("instructor", id);
+      } else if (role === "admin" && form.instructor) {
         formData.append("instructor", form.instructor.value);
       }
 
@@ -238,14 +301,8 @@ const AddCourses = () => {
       // Add modules as JSON
       formData.append("modules", JSON.stringify(modules));
 
-      console.log("Submitting form with:", {
-        title: form.title,
-        instructor: userRole === "instructor" ? userId : form.instructor?.value,
-        category: form.category.value,
-        userRole: userRole,
-        banner: bannerFile?.name,
-        thumbnails: thumbnailFiles.length,
-      });
+      console.log("Submitting form with role:", role);
+      console.log("Instructor value:", form.instructor?.value);
 
       const res = await axios.post(
         "https://shekhai-server.up.railway.app/api/v1/courses",
@@ -257,8 +314,6 @@ const AddCourses = () => {
         }
       );
 
-      console.log("Response:", res.data);
-
       if (res.data.success) {
         toast.success("Course added successfully!");
 
@@ -267,8 +322,7 @@ const AddCourses = () => {
           title: "",
           shortDescription: "",
           longDescription: "",
-          instructor:
-            userRole === "instructor" ? { value: userId, label: "You" } : null,
+          instructor: null,
           price: "",
           category: null,
           level: "Beginner",
@@ -284,7 +338,7 @@ const AddCourses = () => {
         setThumbnailPreviews([]);
 
         // Redirect to courses list
-        setTimeout(() => navigate("/courses"), 1500);
+        setTimeout(() => navigate("/all-courses"), 1500);
       } else {
         toast.error(res.data.msg || "Course not added");
       }
@@ -319,10 +373,10 @@ const AddCourses = () => {
       <div className="mb-3">
         <span
           className={`badge ${
-            userRole === "admin" ? "bg-danger" : "bg-primary"
+            userRole === "admin" ? "bg-danger" : userRole === "instructor" ? "bg-primary" : "bg-secondary"
           }`}
         >
-          {userRole === "admin" ? "Admin Mode" : "Instructor Mode"}
+          {userRole === "admin" ? "Admin Mode" : userRole === "instructor" ? "Instructor Mode" : "Loading..."}
         </span>
         {userRole === "instructor" && (
           <span className="ms-2 text-muted">
@@ -429,37 +483,49 @@ const AddCourses = () => {
             />
           </div>
 
-          {/* Instructor Field - Only shown for ADMIN */}
-          {userRole === "admin" && (
-            <div className="mb-3">
-              <label className="form-label fw-semibold">Instructor *</label>
-              <Select
-                value={form.instructor}
-                onChange={(val) =>
-                  setForm((prev) => ({ ...prev, instructor: val }))
-                }
-                options={instructors}
-                placeholder="Select Instructor..."
-                isClearable
-                required={userRole === "admin"}
-              />
-              <div className="form-text">Admin must select an instructor</div>
-            </div>
-          )}
+          {/* Instructor Field */}
+          <div className="mb-3">
+            <label className="form-label fw-semibold">
+              Instructor {userRole === "admin" && "*"}
+            </label>
+            
+            {userRole === "admin" ? (
+              <>
+                <Select
+                  value={form.instructor}
+                  onChange={(val) => handleSelectChange("instructor", val)}
+                  options={instructors}
+                  placeholder={instructors.length > 0 ? "Select Instructor..." : "Loading instructors..."}
+                  isClearable
+                  isDisabled={instructors.length === 0}
+                />
+                {instructors.length === 0 ? (
+                  <div className="form-text text-warning">
+                    No instructors found. Please ensure there are instructors in the system.
+                  </div>
+                ) : (
+                  <div className="form-text">Admin must select an instructor</div>
+                )}
+              </>
+            ) : userRole === "instructor" ? (
+              <>
+                <div className="form-control bg-light">
+                  {form.instructor?.label || "You"}
+                </div>
+                <div className="form-text">
+                  Courses will be automatically assigned to you
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="form-control bg-light">
+                  Loading user role...
+                </div>
+              </>
+            )}
+          </div>
 
-          {/* Display current instructor for non-admin */}
-          {userRole === "instructor" && (
-            <div className="mb-3">
-              <label className="form-label fw-semibold">Instructor</label>
-              <div className="form-control bg-light">
-                {form.instructor?.label || "You"}
-              </div>
-              <div className="form-text">
-                Courses will be automatically assigned to you
-              </div>
-            </div>
-          )}
-
+          {/* Rest of the form remains the same */}
           {/* Price */}
           <div className="mb-3">
             <label className="form-label fw-semibold">Price ($)</label>
@@ -484,9 +550,7 @@ const AddCourses = () => {
             <label className="form-label fw-semibold">Category *</label>
             <Select
               value={form.category}
-              onChange={(val) =>
-                setForm((prev) => ({ ...prev, category: val }))
-              }
+              onChange={(val) => handleSelectChange("category", val)}
               options={categories}
               placeholder="Select Category..."
               isClearable
@@ -619,9 +683,7 @@ const AddCourses = () => {
             <label className="form-label fw-semibold">Status</label>
             <Select
               value={statusOptions.find((s) => s.value === form.published)}
-              onChange={(val) =>
-                setForm((prev) => ({ ...prev, published: val.value }))
-              }
+              onChange={(val) => handleSelectChange("published", val.value)}
               options={statusOptions}
               isClearable={false}
             />
