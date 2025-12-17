@@ -27,6 +27,7 @@ const EditProfileForm = ({ user, setUser }) => {
   const [loading, setLoading] = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState(user.avatarUrl || "");
 
   // Upload file to server and get URL
   const uploadFile = async () => {
@@ -50,11 +51,50 @@ const EditProfileForm = ({ user, setUser }) => {
           },
         }
       );
-      return res.data.fileUrl;
+      
+      if (res.data.success) {
+        const fileUrl = res.data.fileUrl;
+        
+        // ✅ Update local state immediately for better UX
+        setAvatarUrl(fileUrl);
+        setAvatarPreview(fileUrl);
+        
+        // ✅ Update authUser in localStorage IMMEDIATELY
+        updateLocalStorageAvatar(fileUrl);
+        
+        toast.success("Avatar uploaded successfully!");
+        return fileUrl;
+      } else {
+        toast.error(res.data.message || "Failed to upload avatar");
+        return avatarUrl;
+      }
     } catch (err) {
       console.error(err);
       toast.error("Failed to upload avatar image");
       return avatarUrl;
+    }
+  };
+
+  // Helper to update avatar in localStorage
+  const updateLocalStorageAvatar = (newAvatarUrl) => {
+    try {
+      const auth = JSON.parse(localStorage.getItem("authUser"));
+      if (auth && auth.user) {
+        // Update the user object in auth
+        auth.user.avatarUrl = newAvatarUrl;
+        
+        // Save back to localStorage
+        localStorage.setItem("authUser", JSON.stringify(auth));
+        
+        // Also update parent component's user state if needed
+        if (setUser) {
+          setUser(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
+        }
+        
+        console.log("LocalStorage avatar updated:", newAvatarUrl);
+      }
+    } catch (error) {
+      console.error("Error updating localStorage avatar:", error);
     }
   };
 
@@ -74,7 +114,13 @@ const EditProfileForm = ({ user, setUser }) => {
       const uploadedUrl = await uploadFile();
 
       // 2️⃣ Prepare payload for profile update
-      const payload = { name, email, bio, avatarUrl: uploadedUrl };
+      const payload = { 
+        name, 
+        email, 
+        bio, 
+        avatarUrl: uploadedUrl 
+      };
+      
       if (newPassword) {
         if (!currentPassword) {
           setLoading(false);
@@ -98,13 +144,26 @@ const EditProfileForm = ({ user, setUser }) => {
 
       if (res.data.success) {
         const updatedUser = res.data.user;
+        
+        // ✅ Update authUser in localStorage COMPLETELY
         auth.user = updatedUser;
         localStorage.setItem("authUser", JSON.stringify(auth));
+        
+        // ✅ Update parent component state
         setUser(updatedUser);
-
-        toast.success("Profile updated successfully!");
+        
+        // ✅ Update local state
+        setAvatarUrl(updatedUser.avatarUrl || "");
+        setAvatarPreview(updatedUser.avatarUrl || "");
+        
+        // Clear password fields
         setCurrentPassword("");
         setNewPassword("");
+        
+        // Clear avatar file selection
+        setAvatarFile(null);
+        
+        toast.success("Profile updated successfully!");
       } else {
         toast.error(res.data.message || "Failed to update profile");
       }
@@ -113,6 +172,31 @@ const EditProfileForm = ({ user, setUser }) => {
       toast.error(err.response?.data?.message || err.message || "Server error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle avatar file selection
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Avatar image too large (max 5MB)");
+        return;
+      }
+      
+      // Check file type
+      const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error("Only image files are allowed (JPEG, PNG, GIF, WebP)");
+        return;
+      }
+      
+      setAvatarFile(file);
+      
+      // Create preview immediately
+      const previewUrl = URL.createObjectURL(file);
+      setAvatarPreview(previewUrl);
     }
   };
 
@@ -147,20 +231,66 @@ const EditProfileForm = ({ user, setUser }) => {
               {!email.trim() && <FormFeedback>Email is required</FormFeedback>}
             </div>
 
-            <div className="col-lg-12 mb-3">
+            <div className="col-lg-10 mb-3">
               <Label>Avatar Image</Label>
               <Input
                 type="file"
                 accept="image/*"
-                onChange={(e) => setAvatarFile(e.target.files[0])}
+                onChange={handleAvatarChange}
               />
-              {avatarUrl && !avatarFile && (
-                <img
-                  src={avatarUrl}
-                  alt="avatar"
-                  style={{ width: 80, height: 80, marginTop: 10, borderRadius: 8 }}
-                />
-              )}
+              <div className="form-text">
+                Max 5MB. Supported: JPG, PNG, GIF, WebP
+              </div>
+            </div>
+            
+            <div className="col-lg-2">
+              {/* Avatar Preview Section */}
+              <div className="d-flex justify-content-center">
+                {avatarFile ? (
+                  // Preview of newly selected file (not uploaded yet)
+                  <div className="position-relative">
+                    <img
+                      src={avatarPreview}
+                      alt="avatar preview"
+                      style={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        border: "3px solid #0d6efd",
+                      }}
+                    />
+                    <div className="position-absolute top-0 start-100 translate-middle">
+                      <span className="badge bg-primary">New</span>
+                    </div>
+                  </div>
+                ) : avatarUrl ? (
+                  // Current avatar from server
+                  <img
+                    src={avatarUrl}
+                    alt="current avatar"
+                    style={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      border: "3px solid #dee2e6",
+                    }}
+                  />
+                ) : (
+                  // Default placeholder if no avatar
+                  <div className="d-flex align-items-center justify-content-center bg-secondary rounded-circle"
+                    style={{
+                      width: 80,
+                      height: 80,
+                    }}
+                  >
+                    <span className="text-white fw-bold fs-4">
+                      {name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="col-lg-12 mb-3">
@@ -175,7 +305,7 @@ const EditProfileForm = ({ user, setUser }) => {
             </div>
 
             <div className="col-lg-6 mb-3">
-              <Label>Current Password</Label>
+              <Label>Current Password (leave blank to keep unchanged)</Label>
               <InputGroup>
                 <Input
                   type={showCurrent ? "text" : "password"}
@@ -190,10 +320,13 @@ const EditProfileForm = ({ user, setUser }) => {
                   {showCurrent ? <EyeSlash /> : <Eye />}
                 </InputGroupText>
               </InputGroup>
+              <div className="form-text">
+                Required only if changing password
+              </div>
             </div>
 
             <div className="col-lg-6 mb-3">
-              <Label>New Password</Label>
+              <Label>New Password (leave blank to keep unchanged)</Label>
               <InputGroup>
                 <Input
                   type={showNew ? "text" : "password"}
@@ -208,6 +341,9 @@ const EditProfileForm = ({ user, setUser }) => {
                   {showNew ? <EyeSlash /> : <Eye />}
                 </InputGroupText>
               </InputGroup>
+              <div className="form-text">
+                Minimum 6 characters
+              </div>
             </div>
           </div>
 
@@ -218,7 +354,14 @@ const EditProfileForm = ({ user, setUser }) => {
               className="w-md"
               disabled={loading}
             >
-              {loading ? <Spinner size="sm" /> : "Save Changes"}
+              {loading ? (
+                <>
+                  <Spinner size="sm" className="me-2" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </div>
         </Form>

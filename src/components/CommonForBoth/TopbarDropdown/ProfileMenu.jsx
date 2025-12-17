@@ -8,12 +8,12 @@ import {
 import { withTranslation } from "react-i18next";
 import { connect } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
-import userAvatar from "../../../assets/images/users/avatar-1.jpg";
 
 const ProfileMenu = ({ t, success }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [username, setUsername] = useState("Guest");
-  const [role, setRole] = useState(""); // <-- Role state added
+  const [role, setRole] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(""); // <-- Avatar state added
 
   const navigate = useNavigate();
 
@@ -26,12 +26,14 @@ const ProfileMenu = ({ t, success }) => {
       // Check expiry
       if (!parsed.expiresAt || Date.now() < parsed.expiresAt) {
         setUsername(parsed.user?.name || parsed.user?.email || "Guest");
-        setRole(parsed.user?.role || ""); // <-- Read role here
+        setRole(parsed.user?.role || "");
+        setAvatarUrl(parsed.user?.avatarUrl || ""); // <-- Set avatar URL
       } else {
         // Expired token
         localStorage.removeItem("authUser");
         setUsername("Guest");
         setRole("");
+        setAvatarUrl("");
       }
     }
   }, [success]);
@@ -40,8 +42,8 @@ const ProfileMenu = ({ t, success }) => {
     localStorage.removeItem("authUser");
     navigate("/login");
   };
-
   return (
+    <>
     <Dropdown
       isOpen={menuOpen}
       toggle={() => setMenuOpen(!menuOpen)}
@@ -50,12 +52,12 @@ const ProfileMenu = ({ t, success }) => {
       <DropdownToggle className="btn header-item" tag="button">
         <img
           className="rounded-circle header-profile-user"
-          src={userAvatar}
+          src={avatarUrl || "/assets/images/users/avatar-1.jpg"} // fallback
           alt="User Avatar"
         />
         <span className="d-none d-xl-inline-block ms-2 me-1">
           {username}{" "}
-          {role && <span className="text-muted">({role})</span>} {/* Show role */}
+          {role && <span className="text-muted">({role})</span>}
         </span>
         <i className="mdi mdi-chevron-down d-none d-xl-inline-block" />
       </DropdownToggle>
@@ -84,6 +86,7 @@ const ProfileMenu = ({ t, success }) => {
         </DropdownItem>
       </DropdownMenu>
     </Dropdown>
+    </>
   );
 };
 

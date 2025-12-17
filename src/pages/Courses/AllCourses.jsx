@@ -118,6 +118,7 @@ const AllCourses = () => {
                   <thead className="table-light">
                     <tr>
                       <th>#</th>
+                      <th>Banner</th>
                       <th>Course Name</th>
                       <th>Instructor</th>
                       <th>Level</th>
@@ -132,6 +133,14 @@ const AllCourses = () => {
                     {filteredData.map((item, index) => (
                       <tr key={item._id}>
                         <td>{index + 1}</td>
+                        <td>
+                          <img
+                            className="img-fluid rounded"
+                            style={{ width: "150px", height: "100%", objectFit: "cover" }}
+                            src={item.bannerUrl}
+                            alt=""
+                          />
+                        </td>
                         <td>{item.title}</td>
                         <td>{item.instructor?.name || "N/A"}</td>
                         <td>{item.level}</td>

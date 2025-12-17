@@ -34,12 +34,15 @@ const UserProfile = () => {
           return;
         }
 
-        const res = await axios.get("https://shekhai-server.up.railway.app/api/v1/users/me", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await axios.get(
+          "https://shekhai-server.up.railway.app/api/v1/users/me",
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
         if (res.data.success) {
           setUser(res.data.user);
