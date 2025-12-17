@@ -116,10 +116,10 @@ const UserProfile = () => {
             {/* Personal Info */}
             <Card className="shadow-sm mt-4">
               <CardBody>
-                <CardTitle tag="h5" className="mb-3">
-                  Personal Info
-                </CardTitle>
-                <div className="table-responsive">
+                <h1 className="mb-3">
+                  All Info
+                </h1>
+                <div className="table-responsive pt-3">
                   <table className="table table-borderless table-striped mb-0">
                     <tbody>
                       <tr>
