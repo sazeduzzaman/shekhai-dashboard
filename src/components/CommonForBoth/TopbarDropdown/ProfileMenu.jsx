@@ -45,7 +45,7 @@ const ProfileMenu = ({ t, success }) => {
             setLoading(true);
             try {
               const res = await axios.get(
-                "https://shekhai-server.up.railway.app/api/v1/users/me",
+                "https://shekhai-server-production.up.railway.app/api/v1/users/me",
                 {
                   headers: {
                     Authorization: `Bearer ${token}`,

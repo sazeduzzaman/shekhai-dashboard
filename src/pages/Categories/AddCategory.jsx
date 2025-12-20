@@ -44,7 +44,7 @@ const AddCategory = () => {
       setLoading(true); // start loading
       try {
         const res = await axios.post(
-          "https://shekhai-server.up.railway.app/api/v1/categories",
+          "https://shekhai-server-production.up.railway.app/api/v1/categories",
           values,
           {
             headers: {

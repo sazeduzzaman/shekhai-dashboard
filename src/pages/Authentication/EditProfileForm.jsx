@@ -42,7 +42,7 @@ const EditProfileForm = ({ user, setUser }) => {
 
     try {
       const res = await axios.post(
-        "https://shekhai-server.up.railway.app/api/v1/uploads",
+        "https://shekhai-server-production.up.railway.app/api/v1/uploads",
         formData,
         {
           headers: {
@@ -132,7 +132,7 @@ const EditProfileForm = ({ user, setUser }) => {
 
       // 3️⃣ Send update request
       const res = await axios.put(
-        "https://shekhai-server.up.railway.app/api/v1/users/me",
+        "https://shekhai-server-production.up.railway.app/api/v1/users/me",
         payload,
         {
           headers: {

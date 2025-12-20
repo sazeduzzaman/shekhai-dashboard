@@ -27,7 +27,7 @@ const AllCourses = () => {
   const fetchCourses = async () => {
     try {
       const res = await fetch(
-        "https://shekhai-server.up.railway.app/api/v1/courses",
+        "https://shekhai-server-production.up.railway.app/api/v1/courses",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -116,7 +116,7 @@ const AllCourses = () => {
 
     try {
       const res = await fetch(
-        `https://shekhai-server.up.railway.app/api/v1/courses/${id}`,
+        `https://shekhai-server-production.up.railway.app/api/v1/courses/${id}`,
         {
           method: "DELETE",
           headers: {

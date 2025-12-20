@@ -46,7 +46,7 @@ const Users = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("https://shekhai-server.up.railway.app/api/v1/users", {
+      const res = await axios.get("https://shekhai-server-production.up.railway.app/api/v1/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(res.data.users || []);
@@ -96,7 +96,7 @@ const Users = () => {
   const handleUpdate = async (id) => {
     try {
       const res = await axios.put(
-        `https://shekhai-server.up.railway.app/api/v1/users/${id}`,
+        `https://shekhai-server-production.up.railway.app/api/v1/users/${id}`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -124,7 +124,7 @@ const Users = () => {
             onClick={async () => {
               toast.dismiss();
               try {
-                await axios.delete(`https://shekhai-server.up.railway.app/api/v1/users/${id}`, {
+                await axios.delete(`https://shekhai-server-production.up.railway.app/api/v1/users/${id}`, {
                   headers: { Authorization: `Bearer ${token}` },
                 });
                 setUsers((prev) => prev.filter((i) => i._id !== id));

@@ -35,7 +35,7 @@ const UserProfile = () => {
         }
 
         const res = await axios.get(
-          "https://shekhai-server.up.railway.app/api/v1/users/me",
+          "https://shekhai-server-production.up.railway.app/api/v1/users/me",
           {
             headers: {
               "Content-Type": "application/json",

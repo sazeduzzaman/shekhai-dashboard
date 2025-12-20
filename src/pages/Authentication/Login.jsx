@@ -53,7 +53,7 @@ const Login = () => {
       setError("");
       try {
         const res = await axios.post(
-          "https://shekhai-server.up.railway.app/api/v1/auth/login",
+          "https://shekhai-server-production.up.railway.app/api/v1/auth/login",
           values
         );
 
