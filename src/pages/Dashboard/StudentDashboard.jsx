@@ -20,44 +20,18 @@ import {
   Clock,
   Award,
   Calendar,
-  CheckCircle,
-  XCircle,
-  MessageSquare,
-  Download,
   Star,
   TrendingUp,
-  Users,
-  Video,
   FileText,
-  Bell,
-  Settings,
-  HelpCircle,
   Target,
-  BarChart2,
-  PlayCircle,
   Book,
-  Briefcase,
-  Globe,
-  Camera,
-  Music,
-  Cpu,
-  DollarSign,
   FilePlus,
   Clock as ClockIcon,
   Eye,
-  Share2,
-  Bookmark,
   MoreVertical,
-  ChevronRight,
-  TrendingDown,
   Activity,
-  Coffee,
   Zap,
-  Heart,
-  Gift,
   Shield,
-  ThumbsUp,
-  Cloud,
 } from "react-feather";
 
 const StudentDashboard = ({ user, token }) => {
@@ -482,7 +456,7 @@ const StudentDashboard = ({ user, token }) => {
                       size="sm"
                       className="me-2"
                       tag={Link}
-                      to="/student/courses"
+                      to="/student/browse-courses"
                     >
                       Browse All
                     </Button>
@@ -547,7 +521,8 @@ const StudentDashboard = ({ user, token }) => {
                               color="primary"
                               size="sm"
                               tag={Link}
-                              to={`/student/course/${course.id}`}
+                              // to={`/student/course/${course.id}`}
+                              to={"/student/continue-courses"}
                             >
                               Continue
                             </Button>
@@ -651,7 +626,7 @@ const StudentDashboard = ({ user, token }) => {
                     color="outline-primary"
                     size="sm"
                     tag={Link}
-                    to="/student/achievements"
+                    to="/student/certificates"
                   >
                     View All
                   </Button>
@@ -705,7 +680,7 @@ const StudentDashboard = ({ user, token }) => {
                     color="outline-primary"
                     size="sm"
                     tag={Link}
-                    to="/student/calendar"
+                    to="/student/assignments"
                   >
                     <Calendar size={14} />
                   </Button>
@@ -816,7 +791,7 @@ const StudentDashboard = ({ user, token }) => {
                 color="outline-primary"
                 size="sm"
                 tag={Link}
-                to="/student/courses"
+                to="/student/browse-courses"
               >
                 Browse All
               </Button>

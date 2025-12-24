@@ -46,12 +46,15 @@ const Users = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("https://shekhai-server-production.up.railway.app/api/v1/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(
+        "https://shekhai-server-production.up.railway.app/api/v1/users",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setUsers(res.data.users || []);
     } catch (err) {
-      console.log(err)
+      console.log(err);
       toast.error("Failed to load instructors");
     } finally {
       setLoading(false);
@@ -102,9 +105,7 @@ const Users = () => {
       );
       toast.success("Instructor updated successfully!");
       // Update local state
-      setUsers((prev) =>
-        prev.map((i) => (i._id === id ? res.data.user : i))
-      );
+      setUsers((prev) => prev.map((i) => (i._id === id ? res.data.user : i)));
       setEditModalOpen(false);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update instructor");
@@ -124,9 +125,12 @@ const Users = () => {
             onClick={async () => {
               toast.dismiss();
               try {
-                await axios.delete(`https://shekhai-server-production.up.railway.app/api/v1/users/${id}`, {
-                  headers: { Authorization: `Bearer ${token}` },
-                });
+                await axios.delete(
+                  `https://shekhai-server-production.up.railway.app/api/v1/users/${id}`,
+                  {
+                    headers: { Authorization: `Bearer ${token}` },
+                  }
+                );
                 setUsers((prev) => prev.filter((i) => i._id !== id));
                 toast.success("User deleted successfully!");
               } catch (err) {
@@ -138,7 +142,10 @@ const Users = () => {
           >
             Yes
           </button>
-          <button className="btn btn-sm btn-secondary" onClick={() => toast.dismiss()}>
+          <button
+            className="btn btn-sm btn-secondary"
+            onClick={() => toast.dismiss()}
+          >
             Cancel
           </button>
         </div>
@@ -152,6 +159,7 @@ const Users = () => {
       item.name?.toLowerCase().includes(search.toLowerCase()) ||
       item.role?.toLowerCase().includes(search.toLowerCase())
   );
+  console.log(filteredData, "filteredData");
 
   return (
     <div className="page-content">
@@ -188,9 +196,11 @@ const Users = () => {
                       <th>#</th>
                       <th>Name</th>
                       <th>Email</th>
+                      <th>Create At</th>
+                      <th>Update At</th>
                       <th>Role</th>
                       <th>Status</th>
-                      <th style={{ width: "160px" }}>Actions</th>
+                      <th className="text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -207,6 +217,25 @@ const Users = () => {
                           <td>{item.name}</td>
                           <td>{item.email}</td>
                           <td>
+                            {new Date(item.createdAt).toLocaleString("en-GB", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </td>
+                          <td>
+                            {new Date(item.updatedAt).toLocaleString("en-GB", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </td>
+
+                          <td>
                             <span
                               className={`badge ${
                                 item.role === "student"
@@ -216,7 +245,8 @@ const Users = () => {
                                   : "bg-danger"
                               }`}
                             >
-                              {item.role.charAt(0).toUpperCase() + item.role.slice(1)}
+                              {item.role.charAt(0).toUpperCase() +
+                                item.role.slice(1)}
                             </span>
                           </td>
                           <td>
@@ -228,7 +258,7 @@ const Users = () => {
                               {item.status || "Active"}
                             </span>
                           </td>
-                          <td>
+                          <td className="d-flex justify-content-center">
                             <div className="d-flex gap-2">
                               <Button
                                 color="primary"
@@ -265,7 +295,10 @@ const Users = () => {
       </div>
 
       {/* VIEW MODAL */}
-      <Modal isOpen={viewModalOpen} toggle={() => setViewModalOpen(!viewModalOpen)}>
+      <Modal
+        isOpen={viewModalOpen}
+        toggle={() => setViewModalOpen(!viewModalOpen)}
+      >
         <ModalHeader toggle={() => setViewModalOpen(!viewModalOpen)}>
           Instructor Profile
         </ModalHeader>
@@ -300,7 +333,10 @@ const Users = () => {
       </Modal>
 
       {/* EDIT MODAL */}
-      <Modal isOpen={editModalOpen} toggle={() => setEditModalOpen(!editModalOpen)}>
+      <Modal
+        isOpen={editModalOpen}
+        toggle={() => setEditModalOpen(!editModalOpen)}
+      >
         <ModalHeader toggle={() => setEditModalOpen(!editModalOpen)}>
           Edit Instructor
         </ModalHeader>
@@ -326,7 +362,12 @@ const Users = () => {
             </FormGroup>
             <FormGroup>
               <Label>Role</Label>
-              <Input type="select" name="role" value={formData.role} onChange={handleFormChange}>
+              <Input
+                type="select"
+                name="role"
+                value={formData.role}
+                onChange={handleFormChange}
+              >
                 <option value="student">Student</option>
                 <option value="instructor">Instructor</option>
                 <option value="admin">Admin</option>
@@ -347,7 +388,10 @@ const Users = () => {
           </Form>
         </ModalBody>
         <ModalFooter>
-          <Button color="success" onClick={() => handleUpdate(selectedInstructor._id)}>
+          <Button
+            color="success"
+            onClick={() => handleUpdate(selectedInstructor._id)}
+          >
             Save Changes
           </Button>
           <Button color="secondary" onClick={() => setEditModalOpen(false)}>

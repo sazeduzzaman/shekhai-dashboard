@@ -18,32 +18,12 @@ import {
   MessageSquare,
   Video,
   DollarSign,
-  Bookmark,
   Globe,
-  Clock,
-  Target,
   HelpCircle,
   Star,
-  Download,
-  Upload,
-  Shield,
   Layers,
-  Folder,
-  Database,
-  Server,
   Bell,
-  FilePlus,
-  CheckCircle,
-  XCircle,
-  TrendingUp,
-  Coffee,
-  Zap,
-  Heart,
-  Activity,
   User,
-  Mail,
-  UserPlus,
-  Plus,
   PlayCircle,
 } from "react-feather";
 
@@ -154,27 +134,21 @@ const SidebarContent = ({ t }) => {
                 </Link>
                 <ul className="sub-menu">
                   <li>
-                    <Link to="/student/courses">
+                    <Link to="/student/my-courses">
                       <BookOpen size={16} className="me-2" />
                       {t("My Courses")}
                     </Link>
                   </li>
                   <li>
-                    <Link to="/student/continue-learning">
+                    <Link to="/student/continue-courses">
                       <PlayCircle size={16} className="me-2" />
                       {t("Continue Learning")}
                     </Link>
                   </li>
                   <li>
-                    <Link to="/student/courses/browse">
+                    <Link to="/student/browse-courses">
                       <Globe size={16} className="me-2" />
                       {t("Browse Courses")}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/student/wishlist">
-                      <Bookmark size={16} className="me-2" />
-                      {t("Wishlist")}
                     </Link>
                   </li>
                   <li>
@@ -196,22 +170,9 @@ const SidebarContent = ({ t }) => {
                       {t("All Assignments")}
                     </Link>
                   </li>
-                  <li>
-                    <Link to="/student/assignments/pending">
-                      {t("Pending")}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/student/assignments/submitted">
-                      {t("Submitted")}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/student/exams">{t("Exams")}</Link>
-                  </li>
                 </ul>
               </li>
-              <li>
+              {/* <li>
                 <Link to="/#" className="has-arrow">
                   <BarChart2 size={18} className="align-middle me-2" />
                   <span>{t("Grades & Progress")}</span>
@@ -224,20 +185,20 @@ const SidebarContent = ({ t }) => {
                     <Link to="/student/progress">{t("Learning Progress")}</Link>
                   </li>
                   <li>
-                    <Link to="/student/achievements">{t("Achievements")}</Link>
+                    <Link to="/student/certificates">{t("Achievements")}</Link>
                   </li>
                   <li>
                     <Link to="/student/analytics">{t("Study Analytics")}</Link>
                   </li>
                 </ul>
-              </li>
+              </li> */}
               <li>
-                <Link to="/student/calendar">
+                <Link to="/#">
                   <Calendar size={18} className="me-2" />
                   {t("Calendar")}
                 </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link to="/#" className="has-arrow">
                   <Users size={18} className="align-middle me-2" />
                   <span>{t("Study Groups")}</span>
@@ -255,8 +216,8 @@ const SidebarContent = ({ t }) => {
                     <Link to="/student/forum">{t("Discussion Forum")}</Link>
                   </li>
                 </ul>
-              </li>
-              <li>
+              </li> */}
+              {/* <li>
                 <Link to="/student/messages">
                   <MessageSquare size={18} className="me-2" />
                   <span>{t("Messages")}</span>
@@ -264,7 +225,7 @@ const SidebarContent = ({ t }) => {
                     3
                   </span>
                 </Link>
-              </li>
+              </li> */}
             </>
           )}
 
@@ -422,7 +383,9 @@ const SidebarContent = ({ t }) => {
                     <Link to="/users/add">{t("Add User")}</Link>
                   </li>
                   <li>
-                    <Link to="/role-permissions">{t("Roles & Permissions")}</Link>
+                    <Link to="/role-permissions">
+                      {t("Roles & Permissions")}
+                    </Link>
                   </li>
                 </ul>
               </li>

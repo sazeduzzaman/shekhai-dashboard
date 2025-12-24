@@ -180,6 +180,11 @@ import AllInstructor from "../pages/AllInstructor/AllInstructor";
 import InstructorAdd from "../pages/AllInstructor/InstructorAdd";
 import InstructorPerformance from "../pages/AllInstructor/InstructorPerformance";
 import RolePermissions from "../pages/RolePermissions/RolePermissions";
+import MyCourses from "../pages/Student/MyCourses";
+import ContinueCourses from "../pages/Student/ContinueCourses";
+import BrowseCourses from "../pages/Student/BrowseCourses";
+import Certificates from "../pages/Student/Certificates";
+import Assignments from "../pages/Student/Assignments";
 // import UiProgressbar from "../../src/pages/Ui/UiProgressbar"
 
 const authProtectedRoutes = [
@@ -199,6 +204,11 @@ const authProtectedRoutes = [
   { path: "/instructors/add", component: <InstructorAdd /> },
   { path: "/instructors/performance", component: <InstructorPerformance /> },
   { path: "/role-permissions", component: <RolePermissions /> },
+  { path: "/student/my-courses", component: <MyCourses /> },
+  { path: "/student/continue-courses", component: <ContinueCourses /> },
+  { path: "/student/browse-courses", component: <BrowseCourses /> },
+  { path: "/student/certificates", component: <Certificates /> },
+  { path: "/student/assignments", component: <Assignments /> },
 
 
   //   //Crypto
