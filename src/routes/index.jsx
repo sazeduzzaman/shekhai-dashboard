@@ -176,6 +176,10 @@ import Users from "../pages/Users/Users";
 import AddUsers from "../pages/Users/AddUsers";
 import AllNotification from "../pages/AllNotification/AllNotification";
 import Settings from "../pages/Settings/Settings";
+import AllInstructor from "../pages/AllInstructor/AllInstructor";
+import InstructorAdd from "../pages/AllInstructor/InstructorAdd";
+import InstructorPerformance from "../pages/AllInstructor/InstructorPerformance";
+import RolePermissions from "../pages/RolePermissions/RolePermissions";
 // import UiProgressbar from "../../src/pages/Ui/UiProgressbar"
 
 const authProtectedRoutes = [
@@ -191,6 +195,11 @@ const authProtectedRoutes = [
   { path: "/students/add", component: <AddStudent /> },
   { path: "/all-notification", component: <AllNotification /> },
   { path: "/settings", component: <Settings /> },
+  { path: "/all-instructors", component: <AllInstructor /> },
+  { path: "/instructors/add", component: <InstructorAdd /> },
+  { path: "/instructors/performance", component: <InstructorPerformance /> },
+  { path: "/role-permissions", component: <RolePermissions /> },
+
 
   //   //Crypto
   { path: "/crypto-wallet", component: <CryptoWallet /> },

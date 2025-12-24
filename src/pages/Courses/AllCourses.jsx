@@ -20,7 +20,7 @@ const AllCourses = () => {
     role: userRole,
     userId: userId,
     userEmail: userEmail,
-    token: token ? "Exists" : "Missing"
+    token: token ? "Exists" : "Missing",
   });
 
   // --------- FETCH COURSES ----------
@@ -34,60 +34,64 @@ const AllCourses = () => {
           },
         }
       );
-      
+
       const data = await res.json();
       console.log("API Response:", data);
 
       if (data.success && Array.isArray(data.courses)) {
         console.log("Total courses fetched:", data.courses.length);
-        
+
         // Filter courses based on user role
         let filteredCourses = data.courses;
-        
+
         if (userRole === "instructor") {
           console.log("Filtering courses for instructor...");
-          
+
           // Multiple ways to filter - check ID, email, or name
-          filteredCourses = data.courses.filter(course => {
+          filteredCourses = data.courses.filter((course) => {
             const instructor = course.instructor;
-            
+
             console.log("Checking course:", {
               courseTitle: course.title,
               courseInstructorId: instructor?._id,
               courseInstructorEmail: instructor?.email,
               courseInstructorName: instructor?.name,
               userId: userId,
-              userEmail: userEmail
+              userEmail: userEmail,
             });
-            
+
             // Check if instructor exists and matches current user
             if (!instructor) return false;
-            
+
             // Try matching by ID first (most reliable)
             if (instructor._id && userId && instructor._id === userId) {
               console.log("Matched by ID");
               return true;
             }
-            
+
             // Try matching by email
-            if (instructor.email && userEmail && instructor.email === userEmail) {
+            if (
+              instructor.email &&
+              userEmail &&
+              instructor.email === userEmail
+            ) {
               console.log("Matched by email");
               return true;
             }
-            
+
             // Try matching by name (least reliable but as fallback)
             const userName = authUser?.user?.name;
             if (instructor.name && userName && instructor.name === userName) {
               console.log("Matched by name");
               return true;
             }
-            
+
             return false;
           });
-          
+
           console.log("Filtered courses count:", filteredCourses.length);
         }
-        
+
         setCourses(filteredCourses);
       } else {
         console.error("Invalid API response:", data);
@@ -143,7 +147,7 @@ const AllCourses = () => {
   const filteredData = courses.filter((course) =>
     course.title.toLowerCase().includes(search.toLowerCase())
   );
-
+  console.log(userId, "userId");
   return (
     <div className="page-content">
       <div className="container-fluid">
@@ -153,15 +157,23 @@ const AllCourses = () => {
         <div className="alert alert-info mb-3">
           <div className="d-flex justify-content-between align-items-center">
             <div>
-              <strong>User Info:</strong> 
-              <span className="ms-2 badge bg-primary">{userRole || "Unknown"}</span>
-              <span className="ms-2">ID: {userId?.substring(0, 8) || "N/A"}...</span>
+              <strong>User Info:</strong>
+              <span className="ms-2 badge bg-primary">
+                {userRole || "Unknown"}
+              </span>
+              <span className="ms-2">
+                ID: {userId?.substring(0, 8) || "N/A"}...
+              </span>
               <span className="ms-2">Email: {userEmail || "N/A"}</span>
             </div>
             <div>
-              <strong>Courses:</strong> 
-              <span className="ms-2 badge bg-success">{courses.length} total</span>
-              <span className="ms-2 badge bg-warning">{filteredData.length} filtered</span>
+              <strong>Courses:</strong>
+              <span className="ms-2 badge bg-success">
+                {courses.length} total
+              </span>
+              <span className="ms-2 badge bg-warning">
+                {filteredData.length} filtered
+              </span>
             </div>
           </div>
         </div>
@@ -200,7 +212,7 @@ const AllCourses = () => {
                 </div>
                 <h4>No courses found</h4>
                 <p className="text-muted mb-4">
-                  {userRole === "instructor" 
+                  {userRole === "instructor"
                     ? "You haven't created any courses yet. Create your first course to get started."
                     : "No courses available in the system."}
                 </p>
@@ -230,28 +242,43 @@ const AllCourses = () => {
 
                   <tbody>
                     {filteredData.map((item, index) => {
-                      const isMyCourse = userRole === "instructor" && 
-                        (item.instructor?._id === userId || 
-                         item.instructor?.email === userEmail);
-                      
+                      const isMyCourse =
+                        userRole === "instructor" &&
+                        (item.instructor?._id === userId ||
+                          item.instructor?.email === userEmail);
+
                       return (
-                        <tr key={item._id} className={isMyCourse ? "table-active" : ""}>
+                        <tr
+                          key={item._id}
+                          className={isMyCourse ? "table-active" : ""}
+                        >
                           <td>{index + 1}</td>
                           <td>
                             <img
                               className="img-fluid rounded"
-                              style={{ width: "150px", height: "100px", objectFit: "cover" }}
-                              src={item.bannerUrl || "https://via.placeholder.com/150x100?text=No+Banner"}
+                              style={{
+                                width: "150px",
+                                height: "100px",
+                                objectFit: "cover",
+                              }}
+                              src={
+                                item.bannerUrl ||
+                                "https://via.placeholder.com/150x100?text=No+Banner"
+                              }
                               alt={item.title}
                               onError={(e) => {
-                                e.target.src = "https://via.placeholder.com/150x100?text=No+Banner";
+                                e.target.src =
+                                  "https://via.placeholder.com/150x100?text=No+Banner";
                               }}
                             />
                           </td>
                           <td>
                             <strong>{item.title}</strong>
                             {item.shortDescription && (
-                              <p className="text-muted mb-0 small" style={{ maxWidth: "300px" }}>
+                              <p
+                                className="text-muted mb-0 small"
+                                style={{ maxWidth: "300px" }}
+                              >
                                 {item.shortDescription.substring(0, 80)}...
                               </p>
                             )}
@@ -260,22 +287,40 @@ const AllCourses = () => {
                             <div>
                               <strong>{item.instructor?.name || "N/A"}</strong>
                               <br />
-                              <small className="text-muted">{item.instructor?.email}</small>
+                              <small className="text-muted">
+                                {item.instructor?.email}
+                              </small>
                               {isMyCourse && (
                                 <span className="badge bg-info ms-2">You</span>
                               )}
                             </div>
                           </td>
                           <td>
-                            <span className={`badge bg-${item.level === 'Advanced' ? 'danger' : item.level === 'Intermediate' ? 'warning' : 'success'}`}>
+                            <span
+                              className={`badge bg-${
+                                item.level === "Advanced"
+                                  ? "danger"
+                                  : item.level === "Intermediate"
+                                  ? "warning"
+                                  : "success"
+                              }`}
+                            >
                               {item.level}
                             </span>
                           </td>
-                          <td>{item.totalModules || item.modules?.length || 0}</td>
-                          <td>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "N/A"}</td>
+                          <td>
+                            {item.totalModules || item.modules?.length || 0}
+                          </td>
+                          <td>
+                            {item.createdAt
+                              ? new Date(item.createdAt).toLocaleDateString()
+                              : "N/A"}
+                          </td>
                           <td>
                             <span
-                              className={`badge bg-${item.published ? "success" : "danger"}`}
+                              className={`badge bg-${
+                                item.published ? "success" : "danger"
+                              }`}
                             >
                               {item.published ? "Active" : "Inactive"}
                             </span>
