@@ -47,7 +47,7 @@ const AddCourses = () => {
     document.title = "Add Course | LMS Dashboard";
     const stored = localStorage.getItem("authUser");
     console.log("LocalStorage authUser:", stored); // Debug log
-    
+
     if (!stored) {
       toast.error("You are not logged in.");
       navigate("/login");
@@ -57,9 +57,9 @@ const AddCourses = () => {
     try {
       const authData = JSON.parse(stored);
       console.log("Parsed authData:", authData); // Debug log
-      
+
       const token = authData?.token;
-      
+
       if (!token) {
         toast.error("Invalid session token.");
         navigate("/login");
@@ -69,7 +69,7 @@ const AddCourses = () => {
       // Get user info from the nested user object
       const user = authData?.user;
       console.log("User object:", user); // Debug log
-      
+
       if (!user) {
         toast.error("User data not found.");
         navigate("/login");
@@ -78,7 +78,7 @@ const AddCourses = () => {
 
       const role = user?.role;
       const id = user?.id;
-      
+
       console.log("Setting userRole:", role, "userId:", id); // Debug log
       setUserRole(role);
       setUserId(id);
@@ -109,7 +109,7 @@ const AddCourses = () => {
               );
 
               console.log("Instructors API response:", instructorsRes.data); // Debug log
-              
+
               const instructorOptions =
                 instructorsRes.data.users?.map((instructor) => ({
                   value: instructor._id,
@@ -121,7 +121,10 @@ const AddCourses = () => {
             } catch (instructorErr) {
               console.error("Error fetching instructors:", instructorErr);
               if (instructorErr.response) {
-                console.error("Response status:", instructorErr.response.status);
+                console.error(
+                  "Response status:",
+                  instructorErr.response.status
+                );
                 console.error("Response data:", instructorErr.response.data);
               }
               toast.error("Failed to fetch instructors list.");
@@ -236,7 +239,7 @@ const AddCourses = () => {
       const authData = JSON.parse(stored);
       const token = authData?.token;
       const user = authData?.user;
-      
+
       if (!token || !user) {
         toast.error("Invalid session data.");
         setLoading(false);
@@ -260,7 +263,6 @@ const AddCourses = () => {
         return;
       }
 
-      // Additional validation for admin
       if (role === "admin" && !form.instructor) {
         toast.error("Instructor is required for admin.");
         setLoading(false);
@@ -275,12 +277,26 @@ const AddCourses = () => {
       formData.append("shortDescription", form.shortDescription);
       formData.append("longDescription", form.longDescription);
 
-      // For instructors, use their own ID; for admins, use selected instructor
+      // ============== FIX THIS PART ==============
+      // CRITICAL: Get the instructor ID correctly
+      let instructorId = null;
+
       if (role === "instructor") {
-        formData.append("instructor", id);
+        // For instructors, use their own ID
+        instructorId = id;
       } else if (role === "admin" && form.instructor) {
-        formData.append("instructor", form.instructor.value);
+        // For admins, use the selected instructor's ID
+        instructorId = form.instructor.value; // This should be the ObjectId string
       }
+
+      if (instructorId) {
+        console.log("Instructor ID being sent:", instructorId);
+        console.log("Type of instructorId:", typeof instructorId);
+
+        // Send as a simple string, not wrapped in an object
+        formData.append("instructor", instructorId);
+      }
+      // ============== END FIX ==============
 
       formData.append("price", Number(form.price) || 0);
       formData.append("category", form.category.value);
@@ -301,8 +317,11 @@ const AddCourses = () => {
       // Add modules as JSON
       formData.append("modules", JSON.stringify(modules));
 
-      console.log("Submitting form with role:", role);
-      console.log("Instructor value:", form.instructor?.value);
+      // Log FormData for debugging
+      console.log("=== FormData Contents ===");
+      for (let [key, value] of formData.entries()) {
+        console.log(key, ":", value);
+      }
 
       const res = await axios.post(
         "https://shekhai-server-production.up.railway.app/api/v1/courses",
@@ -310,6 +329,7 @@ const AddCourses = () => {
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
           },
         }
       );
@@ -373,10 +393,18 @@ const AddCourses = () => {
       <div className="mb-3">
         <span
           className={`badge ${
-            userRole === "admin" ? "bg-danger" : userRole === "instructor" ? "bg-primary" : "bg-secondary"
+            userRole === "admin"
+              ? "bg-danger"
+              : userRole === "instructor"
+              ? "bg-primary"
+              : "bg-secondary"
           }`}
         >
-          {userRole === "admin" ? "Admin Mode" : userRole === "instructor" ? "Instructor Mode" : "Loading..."}
+          {userRole === "admin"
+            ? "Admin Mode"
+            : userRole === "instructor"
+            ? "Instructor Mode"
+            : "Loading..."}
         </span>
         {userRole === "instructor" && (
           <span className="ms-2 text-muted">
@@ -488,23 +516,30 @@ const AddCourses = () => {
             <label className="form-label fw-semibold">
               Instructor {userRole === "admin" && "*"}
             </label>
-            
+
             {userRole === "admin" ? (
               <>
                 <Select
                   value={form.instructor}
                   onChange={(val) => handleSelectChange("instructor", val)}
                   options={instructors}
-                  placeholder={instructors.length > 0 ? "Select Instructor..." : "Loading instructors..."}
+                  placeholder={
+                    instructors.length > 0
+                      ? "Select Instructor..."
+                      : "Loading instructors..."
+                  }
                   isClearable
                   isDisabled={instructors.length === 0}
                 />
                 {instructors.length === 0 ? (
                   <div className="form-text text-warning">
-                    No instructors found. Please ensure there are instructors in the system.
+                    No instructors found. Please ensure there are instructors in
+                    the system.
                   </div>
                 ) : (
-                  <div className="form-text">Admin must select an instructor</div>
+                  <div className="form-text">
+                    Admin must select an instructor
+                  </div>
                 )}
               </>
             ) : userRole === "instructor" ? (

@@ -185,6 +185,14 @@ import ContinueCourses from "../pages/Student/ContinueCourses";
 import BrowseCourses from "../pages/Student/BrowseCourses";
 import Certificates from "../pages/Student/Certificates";
 import Assignments from "../pages/Student/Assignments";
+import InstructorCourses from "../pages/Instructor/InstructorCourses";
+import InstructorQuizzes from "../pages/Instructor/InstructorQuizzes";
+import CreateQuiz from "../pages/Instructor/CreateQuiz";
+import AnnouncementsPage from "../pages/Instructor/AnnouncementsPage";
+import CreateAnnouncementForm from "../pages/Instructor/CreateAnnouncementForm";
+import StudentsPage from "../pages/Instructor/StudentsPage";
+import AttendancePage from "../pages/Instructor/AttendancePage";
+import LiveSessionPage from "../pages/Instructor/LiveSessionPage";
 // import UiProgressbar from "../../src/pages/Ui/UiProgressbar"
 
 const authProtectedRoutes = [
@@ -201,14 +209,23 @@ const authProtectedRoutes = [
   { path: "/all-notification", component: <AllNotification /> },
   { path: "/settings", component: <Settings /> },
   { path: "/all-instructors", component: <AllInstructor /> },
-  { path: "/instructors/add", component: <InstructorAdd /> },
-  { path: "/instructors/performance", component: <InstructorPerformance /> },
   { path: "/role-permissions", component: <RolePermissions /> },
   { path: "/student/my-courses", component: <MyCourses /> },
   { path: "/student/continue-courses", component: <ContinueCourses /> },
   { path: "/student/browse-courses", component: <BrowseCourses /> },
   { path: "/student/certificates", component: <Certificates /> },
   { path: "/student/assignments", component: <Assignments /> },
+  
+  { path: "/instructors/add", component: <InstructorAdd /> },
+  { path: "/instructors/performance", component: <InstructorPerformance /> },
+  { path: "/instructor/courses", component: <InstructorCourses /> },
+  { path: "/instructor/quizzes", component: <InstructorQuizzes /> },
+  { path: "/instructor/quizzes/create", component: <CreateQuiz /> },
+  { path: "/instructor/announcements", component: <AnnouncementsPage /> },
+  { path: "/instructor/announcements/create", component: <CreateAnnouncementForm /> },
+  { path: "/instructor/enrolled/students", component: <StudentsPage /> },
+  { path: "/instructor/enrolled/students/attendance", component: <AttendancePage /> },
+  { path: "/instructor/enrolled/students/live-session", component: <LiveSessionPage /> },
 
 
   //   //Crypto

@@ -242,18 +242,18 @@ const SidebarContent = ({ t }) => {
                     <Link to="/instructor/courses">{t("My Courses")}</Link>
                   </li>
                   <li>
-                    <Link to="/instructor/courses/create">
+                    <Link to="/courses/add">
                       {t("Create Course")}
                     </Link>
                   </li>
-                  <li>
+                  {/* <li>
                     <Link to="/instructor/courses/draft">{t("Drafts")}</Link>
-                  </li>
-                  <li>
+                  </li> */}
+                  {/* <li>
                     <Link to="/instructor/courses/analytics">
                       {t("Course Analytics")}
                     </Link>
-                  </li>
+                  </li> */}
                 </ul>
               </li>
               <li>
@@ -262,15 +262,15 @@ const SidebarContent = ({ t }) => {
                   <span>{t("Content")}</span>
                 </Link>
                 <ul className="sub-menu">
-                  <li>
+                  {/* <li>
                     <Link to="/instructor/lessons">{t("Lessons")}</Link>
-                  </li>
+                  </li> */}
                   <li>
                     <Link to="/instructor/quizzes">{t("Quizzes")}</Link>
                   </li>
-                  <li>
+                  {/* <li>
                     <Link to="/instructor/resources">{t("Resources")}</Link>
-                  </li>
+                  </li> */}
                   <li>
                     <Link to="/instructor/announcements">
                       {t("Announcements")}
@@ -278,7 +278,7 @@ const SidebarContent = ({ t }) => {
                   </li>
                 </ul>
               </li>
-              <li>
+              {/* <li>
                 <Link to="/#" className="has-arrow">
                   <FileText size={18} className="align-middle me-2" />
                   <span>{t("Assessments")}</span>
@@ -299,7 +299,7 @@ const SidebarContent = ({ t }) => {
                     <Link to="/instructor/grades">{t("Gradebook")}</Link>
                   </li>
                 </ul>
-              </li>
+              </li> */}
               <li>
                 <Link to="/#" className="has-arrow">
                   <Users size={18} className="align-middle me-2" />
@@ -307,22 +307,17 @@ const SidebarContent = ({ t }) => {
                 </Link>
                 <ul className="sub-menu">
                   <li>
-                    <Link to="/instructor/students">{t("All Students")}</Link>
+                    <Link to="/instructor/enrolled/students">{t("All Students")}</Link>
                   </li>
                   <li>
-                    <Link to="/instructor/students/performance">
-                      {t("Performance")}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/instructor/students/attendance">
+                    <Link to="/instructor/enrolled/students/attendance">
                       {t("Attendance")}
                     </Link>
                   </li>
                 </ul>
               </li>
               <li>
-                <Link to="/instructor/sessions">
+                <Link to="/instructor/enrolled/students/live-session">
                   <Video size={18} className="me-2" />
                   {t("Live Sessions")}
                 </Link>
@@ -344,12 +339,12 @@ const SidebarContent = ({ t }) => {
                   </li>
                 </ul>
               </li>
-              <li>
+              {/* <li>
                 <Link to="/instructor/reviews">
                   <Star size={18} className="me-2" />
                   {t("Reviews")}
                 </Link>
-              </li>
+              </li> */}
             </>
           )}
 
