@@ -16,13 +16,6 @@ const AllCourses = () => {
   const userId = authUser?.user?._id;
   const userEmail = authUser?.user?.email;
 
-  console.log("Auth User Data:", {
-    role: userRole,
-    userId: userId,
-    userEmail: userEmail,
-    token: token ? "Exists" : "Missing",
-  });
-
   // --------- FETCH COURSES ----------
   const fetchCourses = async () => {
     try {
@@ -39,14 +32,10 @@ const AllCourses = () => {
       console.log("API Response:", data);
 
       if (data.success && Array.isArray(data.courses)) {
-        console.log("Total courses fetched:", data.courses.length);
-
         // Filter courses based on user role
         let filteredCourses = data.courses;
 
         if (userRole === "instructor") {
-          console.log("Filtering courses for instructor...");
-
           // Multiple ways to filter - check ID, email, or name
           filteredCourses = data.courses.filter((course) => {
             const instructor = course.instructor;
@@ -88,8 +77,6 @@ const AllCourses = () => {
 
             return false;
           });
-
-          console.log("Filtered courses count:", filteredCourses.length);
         }
 
         setCourses(filteredCourses);
@@ -261,14 +248,18 @@ const AllCourses = () => {
                                 height: "100px",
                                 objectFit: "cover",
                               }}
-                              src={
-                                item.bannerUrl ||
-                                "https://via.placeholder.com/150x100?text=No+Banner"
-                              }
+                              src={item.bannerUrl || "/images/bg-ico-hero.jpg"}
                               alt={item.title}
                               onError={(e) => {
-                                e.target.src =
-                                  "https://via.placeholder.com/150x100?text=No+Banner";
+                                const target = e.currentTarget;
+                                // Only replace if it's not already the fallback
+                                if (
+                                  target.src !==
+                                  window.location.origin +
+                                    "/images/bg-ico-hero.jpg"
+                                ) {
+                                  target.src = "/images/bg-ico-hero.jpg";
+                                }
                               }}
                             />
                           </td>

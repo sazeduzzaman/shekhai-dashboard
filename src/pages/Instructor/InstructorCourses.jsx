@@ -16,18 +16,11 @@ const InstructorCourses = () => {
   const userId = authUser?.user?._id;
   const userEmail = authUser?.user?.email;
 
-  console.log("Auth User Data:", {
-    role: userRole,
-    userId: userId,
-    userEmail: userEmail,
-    token: token ? "Exists" : "Missing",
-  });
-
   // --------- FETCH COURSES ----------
   const fetchCourses = async () => {
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/v1/courses`,
+        "https://shekhai-server-production.up.railway.app/api/v1/courses",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -36,29 +29,19 @@ const InstructorCourses = () => {
       );
 
       const data = await res.json();
-      console.log("API Response:", data);
 
       if (data.success && Array.isArray(data.courses)) {
-        console.log("Total courses fetched:", data.courses.length);
 
         // Filter courses based on user role
         let filteredCourses = data.courses;
 
         if (userRole === "instructor") {
-          console.log("Filtering courses for instructor...");
 
           // Multiple ways to filter - check ID, email, or name
           filteredCourses = data.courses.filter((course) => {
             const instructor = course.instructor;
 
-            console.log("Checking course:", {
-              courseTitle: course.title,
-              courseInstructorId: instructor?._id,
-              courseInstructorEmail: instructor?.email,
-              courseInstructorName: instructor?.name,
-              userId: userId,
-              userEmail: userEmail,
-            });
+            
 
             // Check if instructor exists and matches current user
             if (!instructor) return false;
@@ -89,7 +72,6 @@ const InstructorCourses = () => {
             return false;
           });
 
-          console.log("Filtered courses count:", filteredCourses.length);
         }
 
         setCourses(filteredCourses);
@@ -120,7 +102,7 @@ const InstructorCourses = () => {
 
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/v1/courses/${id}`,
+        "https://shekhai-server-production.up.railway.app/api/v1/courses/${id}",
         {
           method: "DELETE",
           headers: {
@@ -261,14 +243,18 @@ const InstructorCourses = () => {
                                 height: "100px",
                                 objectFit: "cover",
                               }}
-                              src={
-                                item.bannerUrl ||
-                                "https://via.placeholder.com/150x100?text=No+Banner"
-                              }
+                              src={item.bannerUrl || "/images/bg-ico-hero.jpg"}
                               alt={item.title}
                               onError={(e) => {
-                                e.target.src =
-                                  "https://via.placeholder.com/150x100?text=No+Banner";
+                                const target = e.currentTarget;
+                                // Only replace if it's not already the fallback
+                                if (
+                                  target.src !==
+                                  window.location.origin +
+                                    "/images/bg-ico-hero.jpg"
+                                ) {
+                                  target.src = "/images/bg-ico-hero.jpg";
+                                }
                               }}
                             />
                           </td>

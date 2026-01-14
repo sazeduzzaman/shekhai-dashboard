@@ -75,7 +75,6 @@ const InstructorQuizzes = ({ courseId, isInstructor = true }) => {
         params.isPublished = publishedFilter === "published";
       }
 
-      console.log("API Params:", params);
 
       const response = await axios.get(`${API_URL}/quizzes`, {
         headers: getHeaders(),
