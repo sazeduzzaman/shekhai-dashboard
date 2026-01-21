@@ -25,7 +25,7 @@ const AllCourses = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const data = await res.json();
@@ -113,7 +113,7 @@ const AllCourses = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const result = await res.json();
@@ -132,7 +132,7 @@ const AllCourses = () => {
 
   // --------- SEARCH FILTER ----------
   const filteredData = courses.filter((course) =>
-    course.title.toLowerCase().includes(search.toLowerCase())
+    course.title.toLowerCase().includes(search.toLowerCase()),
   );
   console.log(userId, "userId");
   return (
@@ -292,8 +292,8 @@ const AllCourses = () => {
                                 item.level === "Advanced"
                                   ? "danger"
                                   : item.level === "Intermediate"
-                                  ? "warning"
-                                  : "success"
+                                    ? "warning"
+                                    : "success"
                               }`}
                             >
                               {item.level}

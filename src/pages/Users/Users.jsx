@@ -159,7 +159,6 @@ const Users = () => {
       item.name?.toLowerCase().includes(search.toLowerCase()) ||
       item.role?.toLowerCase().includes(search.toLowerCase())
   );
-  console.log(filteredData, "filteredData");
 
   return (
     <div className="page-content">

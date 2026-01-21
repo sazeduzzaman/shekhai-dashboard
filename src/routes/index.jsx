@@ -193,6 +193,7 @@ import CreateAnnouncementForm from "../pages/Instructor/CreateAnnouncementForm";
 import StudentsPage from "../pages/Instructor/StudentsPage";
 import AttendancePage from "../pages/Instructor/AttendancePage";
 import LiveSessionPage from "../pages/Instructor/LiveSessionPage";
+import EditCourse from "../pages/Courses/EditCourse";
 // import UiProgressbar from "../../src/pages/Ui/UiProgressbar"
 
 const authProtectedRoutes = [
@@ -204,6 +205,7 @@ const authProtectedRoutes = [
   { path: "/users/add", component: <AddUsers /> },
   { path: "/all-courses", component: <AllCourses /> },
   { path: "/courses/add", component: <AddCourses /> },
+  { path: "/courses/edit/:id", component: <EditCourse /> },
   { path: "/students", component: <Students /> },
   { path: "/students/add", component: <AddStudent /> },
   { path: "/all-notification", component: <AllNotification /> },
