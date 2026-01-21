@@ -24,7 +24,7 @@ class AnnouncementsPage extends Component {
     };
 
     // For Vite.js (Create React App uses REACT_APP_*, Vite uses VITE_*)
-this.API_BASE_URL = import.meta.env.VITE_API_URL || "https://shekhai-server-production.up.railway.app/api/v1";
+this.API_BASE_URL = import.meta.env.VITE_API_URL || "https://shekhai-server.onrender.com/api/v1";
   }
 
   componentDidMount() {

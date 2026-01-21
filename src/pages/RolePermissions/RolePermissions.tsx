@@ -56,7 +56,7 @@ const RolePermissions = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("https://shekhai-server-production.up.railway.app/api/v1/users", {
+      const res = await axios.get("https://shekhai-server.onrender.com/api/v1/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       // Handle the data structure returned by your API
@@ -73,7 +73,7 @@ const RolePermissions = () => {
     setUpdatingId(id);
     try {
       await axios.put(
-        `https://shekhai-server-production.up.railway.app/api/v1/users/${id}`,
+        `https://shekhai-server.onrender.com/api/v1/users/${id}`,
         { role: newRole },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -106,7 +106,7 @@ const RolePermissions = () => {
   const handleUpdate = async () => {
     try {
       const res = await axios.put(
-        `https://shekhai-server-production.up.railway.app/api/v1/users/${selectedUser._id}`,
+        `https://shekhai-server.onrender.com/api/v1/users/${selectedUser._id}`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );

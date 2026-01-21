@@ -87,7 +87,7 @@ const AddCourses = () => {
         try {
           // Fetch categories (always needed)
           const categoriesRes = await axios.get(
-            "https://shekhai-server-production.up.railway.app/api/v1/categories",
+            "https://shekhai-server.onrender.com/api/v1/categories",
             { headers: { Authorization: `Bearer ${token}` } }
           );
 
@@ -104,7 +104,7 @@ const AddCourses = () => {
             try {
               console.log("Fetching instructors as admin..."); // Debug log
               const instructorsRes = await axios.get(
-                "https://shekhai-server-production.up.railway.app/api/v1/users?role=instructor",
+                "https://shekhai-server.onrender.com/api/v1/users?role=instructor",
                 { headers: { Authorization: `Bearer ${token}` } }
               );
 
@@ -324,7 +324,7 @@ const AddCourses = () => {
       }
 
       const res = await axios.post(
-        "https://shekhai-server-production.up.railway.app/api/v1/courses",
+        "https://shekhai-server.onrender.com/api/v1/courses",
         formData,
         {
           headers: {

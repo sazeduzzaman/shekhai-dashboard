@@ -21,7 +21,7 @@ import {
   Tag,
 } from "react-bootstrap-icons";
 
-const API_URL = "https://shekhai-server-production.up.railway.app/api/v1";
+const API_URL = "https://shekhai-server.onrender.com/api/v1";
 
 const CreateQuiz = ({ mode = "create" }) => {
   const { id } = useParams();

@@ -40,7 +40,7 @@ const InstructorAdd = () => {
       setLoading(true);
       try {
         const response = await fetch(
-          "https://shekhai-server-production.up.railway.app/api/v1/auth/signup",
+          "https://shekhai-server.onrender.com/api/v1/auth/signup",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

@@ -41,7 +41,7 @@ class LiveSessionPage extends Component {
     try {
       this.setState({ isLoading: true, error: null });
       const response = await fetch(
-        "https://shekhai-server-production.up.railway.app/api/v1/courses"
+        "https://shekhai-server.onrender.com/api/v1/courses"
       );
 
       if (!response.ok) {

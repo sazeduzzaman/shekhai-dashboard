@@ -92,7 +92,7 @@ const Login = () => {
       setLoading(true);
       try {
         const response = await axios.post(
-          "https://shekhai-server-production.up.railway.app/api/v1/auth/login",
+          "https://shekhai-server.onrender.com/api/v1/auth/login",
           values,
           {
             timeout: 10000, // 10 second timeout

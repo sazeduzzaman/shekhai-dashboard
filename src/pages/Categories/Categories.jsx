@@ -37,7 +37,7 @@ const Categories = () => {
     try {
       setLoading(true);
       const res = await axios.get(
-        "https://shekhai-server-production.up.railway.app/api/v1/categories"
+        "https://shekhai-server.onrender.com/api/v1/categories"
       );
       setCategories(res.data.categories || res.data);
     } catch (err) {
@@ -65,7 +65,7 @@ const Categories = () => {
                 toast.dismiss(t.id);
                 try {
                   await axios.delete(
-                    `https://shekhai-server-production.up.railway.app/api/v1/categories/${id}`,
+                    `https://shekhai-server.onrender.com/api/v1/categories/${id}`,
                     { headers: { Authorization: `Bearer ${token}` } }
                   );
                   setCategories(categories.filter((cat) => cat._id !== id));
@@ -112,7 +112,7 @@ const Categories = () => {
 
     try {
       const res = await axios.put(
-        `https://shekhai-server-production.up.railway.app/api/v1/categories/${currentCategory._id}`,
+        `https://shekhai-server.onrender.com/api/v1/categories/${currentCategory._id}`,
         currentCategory,
         { headers: { Authorization: `Bearer ${token}` } }
       );

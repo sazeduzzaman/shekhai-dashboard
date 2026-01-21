@@ -34,7 +34,7 @@ const AllInstructor = () => {
     setLoading(true);
     try {
       const res = await axios.get(
-        "https://shekhai-server-production.up.railway.app/api/v1/users?role=instructor",
+        "https://shekhai-server.onrender.com/api/v1/users?role=instructor",
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -71,7 +71,7 @@ const AllInstructor = () => {
   const handleUpdate = async (id) => {
     try {
       await axios.put(
-        `https://shekhai-server-production.up.railway.app/api/v1/users/${id}`,
+        `https://shekhai-server.onrender.com/api/v1/users/${id}`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -89,7 +89,7 @@ const AllInstructor = () => {
     if (window.confirm("Are you sure you want to delete this instructor?")) {
       axios
         .delete(
-          `https://shekhai-server-production.up.railway.app/api/v1/users/${id}`,
+          `https://shekhai-server.onrender.com/api/v1/users/${id}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

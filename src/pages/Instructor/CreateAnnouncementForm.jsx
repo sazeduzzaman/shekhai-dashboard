@@ -33,7 +33,7 @@ class CreateAnnouncementForm extends Component {
       announcementType: "general", // "general" or "course"
     };
 
-    this.API_BASE_URL = "https://shekhai-server-production.up.railway.app/api/v1";
+    this.API_BASE_URL = "https://shekhai-server.onrender.com/api/v1";
     this.fileInputRef = React.createRef();
   }
 
