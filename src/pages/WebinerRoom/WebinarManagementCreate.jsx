@@ -7,7 +7,7 @@ import {
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const API_BASE_URL = "http://localhost:8080/api/v1";
+const API_BASE_URL = "https://shekhai-server.onrender.com/api/v1";
 
 const WebinarManagementCreate = () => {
   const [formData, setFormData] = useState({

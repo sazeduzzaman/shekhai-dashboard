@@ -25,7 +25,7 @@ import {
 import { toast } from "react-hot-toast";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-const API_BASE_URL = "http://localhost:8080/api/v1/mentor-room";
+const API_BASE_URL = "https://shekhai-server.onrender.com/api/v1/mentor-room";
 
 // Function to convert blob to base64 for permanent storage
 const fileToBase64 = (file) => {
