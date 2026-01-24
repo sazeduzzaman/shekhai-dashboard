@@ -429,6 +429,24 @@ const SidebarContent = ({ t }) => {
                 </ul>
               </li>
               <li>
+                <Link to="/contacts-list">
+                  <Settings size={18} className="me-2" />
+                  {t("Contact List")}
+                </Link>
+              </li>
+              <li>
+                <Link to="/webinar-management">
+                  <Settings size={18} className="me-2" />
+                  {t("Webinar Management")}
+                </Link>
+              </li>
+              <li>
+                <Link to="/mentor-room">
+                  <Settings size={18} className="me-2" />
+                  {t("Mentor RoomManagement")}
+                </Link>
+              </li>
+              <li>
                 <Link to="/#" className="has-arrow">
                   <DollarSign size={18} className="align-middle me-2" />
                   <span>{t("Finance")}</span>

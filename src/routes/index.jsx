@@ -163,7 +163,7 @@ import Pages500 from "../pages/Utility/pages-500";
 
 // //Contacts
 import ContactsGrid from "../pages/Contacts/contacts-grid";
-import ContactsList from "../pages/Contacts/ContactList/contacts-list";
+import ContactsList from "../pages/Contacts/ContactList/contactsList";
 import ContactsProfile from "../pages/Contacts/ContactsProfile/index";
 import UiProgressbar from "../pages/Ui/UiProgressbar";
 import Categories from "../pages/Categories/Categories";
@@ -194,6 +194,11 @@ import StudentsPage from "../pages/Instructor/StudentsPage";
 import AttendancePage from "../pages/Instructor/AttendancePage";
 import LiveSessionPage from "../pages/Instructor/LiveSessionPage";
 import EditCourse from "../pages/Courses/EditCourse";
+import WebinarManagement from "../pages/WebinerRoom/WebinarManagement";
+import WebinarManagementCreate from "../pages/WebinerRoom/WebinarManagementCreate";
+import WebinarManagementEdit from "../pages/WebinerRoom/WebinarManagementEdit";
+import WebinarManagementRegister from "../pages/WebinerRoom/WebinarManagementRegister";
+import MentorRoomManagement from "../pages/MentorRoom/MentorRoomManagement";
 // import UiProgressbar from "../../src/pages/Ui/UiProgressbar"
 
 const authProtectedRoutes = [
@@ -228,6 +233,13 @@ const authProtectedRoutes = [
   { path: "/instructor/enrolled/students", component: <StudentsPage /> },
   { path: "/instructor/enrolled/students/attendance", component: <AttendancePage /> },
   { path: "/instructor/enrolled/students/live-session", component: <LiveSessionPage /> },
+
+  { path: "/contacts-list", component: <ContactsList /> },
+  { path: "/webinar-management", component: <WebinarManagement /> },
+  { path: "/webinar-management/create", component: <WebinarManagementCreate /> },
+  { path: "/webinar-management/edit/:id", component: <WebinarManagementEdit /> },
+  { path: "/webinar-management/register", component: <WebinarManagementRegister /> },
+  { path: "/mentor-room", component: <MentorRoomManagement /> },
 
 
   //   //Crypto
@@ -294,7 +306,7 @@ const authProtectedRoutes = [
 
   // Contacts
   { path: "/contacts-grid", component: <ContactsGrid /> },
-  { path: "/contacts-list", component: <ContactsList /> },
+  
   { path: "/contacts-profile", component: <ContactsProfile /> },
 
   //   //Charts
