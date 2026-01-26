@@ -199,6 +199,7 @@ import WebinarManagementCreate from "../pages/WebinerRoom/WebinarManagementCreat
 import WebinarManagementEdit from "../pages/WebinerRoom/WebinarManagementEdit";
 import WebinarManagementRegister from "../pages/WebinerRoom/WebinarManagementRegister";
 import MentorRoomManagement from "../pages/MentorRoom/MentorRoomManagement";
+import HomePageManagement from "../pages/HomePage/HomePageManagement";
 // import UiProgressbar from "../../src/pages/Ui/UiProgressbar"
 
 const authProtectedRoutes = [
@@ -240,6 +241,7 @@ const authProtectedRoutes = [
   { path: "/webinar-management/edit/:id", component: <WebinarManagementEdit /> },
   { path: "/webinar-management/register", component: <WebinarManagementRegister /> },
   { path: "/mentor-room", component: <MentorRoomManagement /> },
+  { path: "/home-page", component: <HomePageManagement /> },
 
 
   //   //Crypto

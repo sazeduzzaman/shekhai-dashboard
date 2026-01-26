@@ -447,6 +447,12 @@ const SidebarContent = ({ t }) => {
                 </Link>
               </li>
               <li>
+                <Link to="/home-page">
+                  <Settings size={18} className="me-2" />
+                  {t("Home Page Management")}
+                </Link>
+              </li>
+              <li>
                 <Link to="/#" className="has-arrow">
                   <DollarSign size={18} className="align-middle me-2" />
                   <span>{t("Finance")}</span>
