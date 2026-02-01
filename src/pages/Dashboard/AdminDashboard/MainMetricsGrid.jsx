@@ -93,7 +93,6 @@ const MainMetricsGrid = () => {
         throw new Error("Please login to view dashboard");
       }
 
-      console.log("Fetching dashboard data...");
 
       // Fetch data from all endpoints
       const [categoriesResponse, usersResponse, coursesResponse] = await Promise.allSettled([
@@ -102,17 +101,10 @@ const MainMetricsGrid = () => {
         api.get('/courses')
       ]);
 
-      console.log("API Responses:", {
-        categories: categoriesResponse,
-        users: usersResponse,
-        courses: coursesResponse
-      });
-
       // Helper function to extract count from response
       const getCount = (response, endpointName) => {
         if (response.status === 'fulfilled') {
           const data = response.value.data;
-          console.log(`${endpointName} data:`, data);
           
           // Based on your API response structure
           if (data.success && Array.isArray(data[endpointName])) {
@@ -143,11 +135,6 @@ const MainMetricsGrid = () => {
       const usersCount = getCount(usersResponse, 'users');
       const coursesCount = getCount(coursesResponse, 'courses');
 
-      console.log("Counts:", {
-        categoriesCount,
-        usersCount,
-        coursesCount
-      });
 
       // Extract instructors count from users data
       let instructorsCount = 0;
@@ -164,7 +151,6 @@ const MainMetricsGrid = () => {
         }
         
         if (usersArray.length > 0) {
-          console.log("Users array sample:", usersArray[0]);
           instructorsCount = usersArray.filter(user => 
             user.role === 'instructor' || 
             user.userType === 'instructor' ||
@@ -210,7 +196,6 @@ const MainMetricsGrid = () => {
         },
       ];
 
-      console.log("Calculated metrics:", calculatedMetrics);
       setMetrics(calculatedMetrics);
       
     } catch (error) {

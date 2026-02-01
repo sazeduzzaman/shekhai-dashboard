@@ -1,0 +1,93 @@
+.sidebar-scrollbar {
+  width: 260px;
+  background: #2a3042;
+  border-right: 1px solid #e5e7eb;
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.menu-title {
+  padding: 1.2rem 1.5rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.menu-link {
+  display: flex;
+  align-items: center;
+  padding: 0.8rem 1.5rem;
+  color: #4b5563;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.menu-link:hover {
+  background-color: #f9fafb;
+  color: #2563eb;
+}
+
+.menu-link.active {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border-left-color: #2563eb;
+  font-weight: 600;
+}
+
+.menu-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.menu-icon {
+  margin-right: 0.8rem;
+  display: flex;
+}
+
+.menu-text {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.dropdown-icon {
+  transition: transform 0.3s;
+}
+
+.menu-item.expanded > .menu-link .dropdown-icon {
+  transform: rotate(0deg); /* Handled by icon swap in React */
+}
+ul li {
+  list-style: none;
+}
+/* Submenu Animation Logic */
+.submenu {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease-out;
+  background-color: #fdfdfd;
+}
+
+.submenu.expanded {
+  max-height: 500px; /* High enough to contain all items */
+}
+
+.child-item .menu-link {
+  padding-left: 3.2rem;
+  font-size: 0.85rem;
+}
+
+.menu-badge {
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+}

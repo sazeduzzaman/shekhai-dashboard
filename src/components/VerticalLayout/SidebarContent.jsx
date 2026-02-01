@@ -11,16 +11,13 @@ import {
   BookOpen,
   Users,
   FileText,
-  BarChart2,
   Settings,
   Award,
   Calendar,
-  MessageSquare,
   Video,
   DollarSign,
   Globe,
   HelpCircle,
-  Star,
   Layers,
   Bell,
   User,
@@ -30,6 +27,7 @@ import {
 const SidebarContent = ({ t }) => {
   const ref = useRef();
   const location = useLocation();
+  const metisMenuRef = useRef();
 
   // Get user role from localStorage
   const auth = JSON.parse(localStorage.getItem("authUser"));
@@ -44,19 +42,16 @@ const SidebarContent = ({ t }) => {
     }
   };
 
-  // Helper to remove all active classes before applying new ones
-  const removeActivation = (items) => {
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      item.classList.remove("active");
-      const parent = item.parentElement;
-      if (parent) {
-        parent.classList.remove("mm-active");
-        const subMenu = parent.querySelector("ul");
-        if (subMenu) subMenu.classList.remove("mm-show");
-      }
+  // Logic to collapse all dropdowns (Used when clicking single links or Dashboard)
+  const collapseAll = useCallback(() => {
+    const ul = document.getElementById("side-menu");
+    if (ul) {
+      const opens = ul.querySelectorAll(".mm-show");
+      const actives = ul.querySelectorAll(".mm-active");
+      opens.forEach((el) => el.classList.remove("mm-show"));
+      actives.forEach((el) => el.classList.remove("mm-active"));
     }
-  };
+  }, []);
 
   const activateParentDropdown = useCallback((item) => {
     item.classList.add("active");
@@ -71,8 +66,6 @@ const SidebarContent = ({ t }) => {
         const parentLi = parentUl.parentElement;
         if (parentLi) {
           parentLi.classList.add("mm-active");
-          const anchor = parentLi.querySelector("a");
-          if (anchor) anchor.classList.add("mm-active");
         }
       }
       parent = parent.parentElement;
@@ -86,7 +79,10 @@ const SidebarContent = ({ t }) => {
     if (!ul) return;
 
     const items = ul.getElementsByTagName("a");
-    removeActivation(items);
+    // Remove previous activations
+    for (let i = 0; i < items.length; i++) {
+      items[i].classList.remove("active");
+    }
 
     let matchingMenuItem = null;
     for (let i = 0; i < items.length; i++) {
@@ -98,17 +94,28 @@ const SidebarContent = ({ t }) => {
 
     if (matchingMenuItem) {
       activateParentDropdown(matchingMenuItem);
+    } else {
+        // If it's a root path or dashboard, ensure clean state
+        collapseAll();
     }
-  }, [location.pathname, activateParentDropdown]);
+  }, [location.pathname, activateParentDropdown, collapseAll]);
 
+  // Initialization
   useEffect(() => {
-    const metisMenu = new MetisMenu("#side-menu");
+    // Initialize MetisMenu with toggle: true for Accordion effect
+    metisMenuRef.current = new MetisMenu("#side-menu", {
+        toggle: true
+    });
+    
     activeMenu();
-    return () => metisMenu.dispose();
-  }, [activeMenu, userRole]); // Re-init if role changes
+    
+    return () => {
+        if (metisMenuRef.current) metisMenuRef.current.dispose();
+    };
+  }, [userRole]); // Re-init on role change
 
+  // Route Change Logic
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
     activeMenu();
   }, [activeMenu]);
 
@@ -118,7 +125,7 @@ const SidebarContent = ({ t }) => {
         <ul className="metismenu list-unstyled" id="side-menu">
           <li className="menu-title">{t("Main")}</li>
           <li>
-            <Link to="/dashboard">
+            <Link to="/dashboard" onClick={collapseAll}>
               <Home size={18} className="align-middle me-2" />
               <span>{t("Dashboard")}</span>
             </Link>
@@ -172,60 +179,12 @@ const SidebarContent = ({ t }) => {
                   </li>
                 </ul>
               </li>
-              {/* <li>
-                <Link to="/#" className="has-arrow">
-                  <BarChart2 size={18} className="align-middle me-2" />
-                  <span>{t("Grades & Progress")}</span>
-                </Link>
-                <ul className="sub-menu">
-                  <li>
-                    <Link to="/student/grades">{t("My Grades")}</Link>
-                  </li>
-                  <li>
-                    <Link to="/student/progress">{t("Learning Progress")}</Link>
-                  </li>
-                  <li>
-                    <Link to="/student/certificates">{t("Achievements")}</Link>
-                  </li>
-                  <li>
-                    <Link to="/student/analytics">{t("Study Analytics")}</Link>
-                  </li>
-                </ul>
-              </li> */}
               <li>
-                <Link to="/#">
+                <Link to="/calendar" onClick={collapseAll}>
                   <Calendar size={18} className="me-2" />
                   {t("Calendar")}
                 </Link>
               </li>
-              {/* <li>
-                <Link to="/#" className="has-arrow">
-                  <Users size={18} className="align-middle me-2" />
-                  <span>{t("Study Groups")}</span>
-                </Link>
-                <ul className="sub-menu">
-                  <li>
-                    <Link to="/student/groups">{t("My Groups")}</Link>
-                  </li>
-                  <li>
-                    <Link to="/student/groups/discover">
-                      {t("Discover Groups")}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/student/forum">{t("Discussion Forum")}</Link>
-                  </li>
-                </ul>
-              </li> */}
-              {/* <li>
-                <Link to="/student/messages">
-                  <MessageSquare size={18} className="me-2" />
-                  <span>{t("Messages")}</span>
-                  <span className="badge bg-danger rounded-pill float-end">
-                    3
-                  </span>
-                </Link>
-              </li> */}
             </>
           )}
 
@@ -246,14 +205,6 @@ const SidebarContent = ({ t }) => {
                       {t("Create Course")}
                     </Link>
                   </li>
-                  {/* <li>
-                    <Link to="/instructor/courses/draft">{t("Drafts")}</Link>
-                  </li> */}
-                  {/* <li>
-                    <Link to="/instructor/courses/analytics">
-                      {t("Course Analytics")}
-                    </Link>
-                  </li> */}
                 </ul>
               </li>
               <li>
@@ -262,15 +213,9 @@ const SidebarContent = ({ t }) => {
                   <span>{t("Content")}</span>
                 </Link>
                 <ul className="sub-menu">
-                  {/* <li>
-                    <Link to="/instructor/lessons">{t("Lessons")}</Link>
-                  </li> */}
                   <li>
                     <Link to="/instructor/quizzes">{t("Quizzes")}</Link>
                   </li>
-                  {/* <li>
-                    <Link to="/instructor/resources">{t("Resources")}</Link>
-                  </li> */}
                   <li>
                     <Link to="/instructor/announcements">
                       {t("Announcements")}
@@ -278,28 +223,6 @@ const SidebarContent = ({ t }) => {
                   </li>
                 </ul>
               </li>
-              {/* <li>
-                <Link to="/#" className="has-arrow">
-                  <FileText size={18} className="align-middle me-2" />
-                  <span>{t("Assessments")}</span>
-                </Link>
-                <ul className="sub-menu">
-                  <li>
-                    <Link to="/instructor/assignments">{t("Assignments")}</Link>
-                  </li>
-                  <li>
-                    <Link to="/instructor/assignments/grade">
-                      {t("Grade Assignments")}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/instructor/exams">{t("Exams")}</Link>
-                  </li>
-                  <li>
-                    <Link to="/instructor/grades">{t("Gradebook")}</Link>
-                  </li>
-                </ul>
-              </li> */}
               <li>
                 <Link to="/#" className="has-arrow">
                   <Users size={18} className="align-middle me-2" />
@@ -317,7 +240,7 @@ const SidebarContent = ({ t }) => {
                 </ul>
               </li>
               <li>
-                <Link to="/instructor/enrolled/students/live-session">
+                <Link to="/instructor/enrolled/students/live-session" onClick={collapseAll}>
                   <Video size={18} className="me-2" />
                   {t("Live Sessions")}
                 </Link>
@@ -339,12 +262,6 @@ const SidebarContent = ({ t }) => {
                   </li>
                 </ul>
               </li>
-              {/* <li>
-                <Link to="/instructor/reviews">
-                  <Star size={18} className="me-2" />
-                  {t("Reviews")}
-                </Link>
-              </li> */}
             </>
           )}
 
@@ -416,11 +333,6 @@ const SidebarContent = ({ t }) => {
                   <li>
                     <Link to="/instructors/add">{t("Add Instructor")}</Link>
                   </li>
-                  {/* <li>
-                    <Link to="/instructors/verification">
-                      {t("Verification")}
-                    </Link>
-                  </li> */}
                   <li>
                     <Link to="/instructors/performance">
                       {t("Performance")}
@@ -429,25 +341,25 @@ const SidebarContent = ({ t }) => {
                 </ul>
               </li>
               <li>
-                <Link to="/contacts-list">
+                <Link to="/contacts-list" onClick={collapseAll}>
                   <Settings size={18} className="me-2" />
                   {t("Contact List")}
                 </Link>
               </li>
               <li>
-                <Link to="/webinar-management">
+                <Link to="/webinar-management" onClick={collapseAll}>
                   <Settings size={18} className="me-2" />
                   {t("Webinar Management")}
                 </Link>
               </li>
               <li>
-                <Link to="/mentor-room">
+                <Link to="/mentor-room" onClick={collapseAll}>
                   <Settings size={18} className="me-2" />
-                  {t("Mentor RoomManagement")}
+                  {t("Mentor Room Management")}
                 </Link>
               </li>
               <li>
-                <Link to="/home-page">
+                <Link to="/home-page" onClick={collapseAll}>
                   <Settings size={18} className="me-2" />
                   {t("Home Page Management")}
                 </Link>
@@ -478,26 +390,26 @@ const SidebarContent = ({ t }) => {
           {/* COMMON FOOTER MENUS */}
           <li className="menu-title">{t("Personal")}</li>
           <li>
-            <Link to="/profile">
+            <Link to="/profile" onClick={collapseAll}>
               <User size={18} className="me-2" />
               {t("Profile")}
             </Link>
           </li>
           <li>
-            <Link to="/all-notification">
+            <Link to="/all-notification" onClick={collapseAll}>
               <Bell size={18} className="me-2" />
               {t("Notifications")}
               <span className="badge bg-danger rounded-pill float-end">5</span>
             </Link>
           </li>
           <li>
-            <Link to="/help">
+            <Link to="/help" onClick={collapseAll}>
               <HelpCircle size={18} className="me-2" />
               {t("Help Center")}
             </Link>
           </li>
           <li>
-            <Link to="/settings">
+            <Link to="/settings" onClick={collapseAll}>
               <Settings size={18} className="me-2" />
               {t("Settings")}
             </Link>

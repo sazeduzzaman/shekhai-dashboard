@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 // Layouts
 import VerticalLayout from "./components/VerticalLayout/";
@@ -11,32 +11,14 @@ import { authProtectedRoutes, publicRoutes } from "./routes/index";
 // Middleware
 import Authmiddleware from "./routes/route";
 
+// Utils
+import { isSessionValid } from "./utils/axiosInstance";
+
 import "./assets/scss/theme.scss";
 
-// Token auto-expiration wrapper
-const AuthTimer = ({ children }) => {
-  const navigate = useNavigate();
-
-  React.useEffect(() => {
-    const checkToken = () => {
-      const authUser = JSON.parse(localStorage.getItem("authUser") || "null");
-
-      if (
-        !authUser ||
-        !authUser.token ||
-        (authUser.expiresAt && Date.now() > authUser.expiresAt)
-      ) {
-        localStorage.removeItem("authUser");
-        navigate("/login", { replace: true });
-      }
-    };
-
-    checkToken();
-    const interval = setInterval(checkToken, 1000);
-    return () => clearInterval(interval);
-  }, [navigate]);
-
-  return children;
+// Session check wrapper
+const SessionCheck = ({ children }) => {
+  return children; // Authmiddleware will handle protection
 };
 
 const App = () => {
@@ -47,7 +29,11 @@ const App = () => {
         <Route
           key={idx}
           path={route.path}
-          element={<NonAuthLayout>{route.component}</NonAuthLayout>}
+          element={
+            <NonAuthLayout>
+              {route.component}
+            </NonAuthLayout>
+          }
           exact
         />
       ))}
@@ -58,18 +44,29 @@ const App = () => {
           key={idx}
           path={route.path}
           element={
-            <AuthTimer>
+            <SessionCheck>
               <Authmiddleware>
                 <VerticalLayout>{route.component}</VerticalLayout>
               </Authmiddleware>
-            </AuthTimer>
+            </SessionCheck>
           }
           exact
         />
       ))}
 
-      {/* Redirect unknown routes to login */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {/* Default redirect */}
+      <Route path="/" element={
+        isSessionValid() 
+          ? <Navigate to="/dashboard" replace /> 
+          : <Navigate to="/login" replace />
+      } />
+      
+      {/* Redirect unknown routes */}
+      <Route path="*" element={
+        isSessionValid() 
+          ? <Navigate to="/dashboard" replace /> 
+          : <Navigate to="/login" replace />
+      } />
     </Routes>
   );
 };

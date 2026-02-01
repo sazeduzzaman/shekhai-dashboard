@@ -1,6 +1,16 @@
 import PropTypes from "prop-types";
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { createSelector } from 'reselect';
+
+// Layout Related Components
+import Header from "./Header";
+import Sidebar from "./Sidebar";
+import Footer from "./Footer";
+import RightSidebar from "../CommonForBoth/RightSidebar";
 import withRouter from "../Common/withRouter";
+
+// Redux Actions
 import {
   changeLayout,
   changeLayoutMode,
@@ -12,19 +22,25 @@ import {
   showRightSidebarAction,
 } from "/src/store/actions";
 
-// Layout Related Components
-import Header from "./Header";
-import Sidebar from "./Sidebar";
-import Footer from "./Footer";
-import RightSidebar from "../CommonForBoth/RightSidebar";
+// Constants
+const MOBILE_USER_AGENTS = /iPhone|iPad|iPod|Android/i;
 
-//redux
-import { useSelector, useDispatch } from "react-redux";
-import { createSelector } from 'reselect';
+// Layout Constants
+const LAYOUT_TYPES = {
+  DEFAULT: "default",
+  CONDENSED: "condensed",
+};
 
+const PRELOADER_DURATION = 2500;
+
+/**
+ * Layout Component
+ * Main application layout wrapper with header, sidebar, footer and right sidebar
+ */
 const Layout = (props) => {
   const dispatch = useDispatch();
 
+  // Select layout properties from Redux store
   const selectLayoutProperties = createSelector(
     (state) => state.Layout,
     (layout) => ({
@@ -36,8 +52,10 @@ const Layout = (props) => {
       topbarTheme: layout.topbarTheme,
       showRightSidebar: layout.showRightSidebar,
       leftSideBarTheme: layout.leftSideBarTheme,
-    }));
+    })
+  );
 
+  // Layout properties from Redux
   const {
     isPreloader,
     leftSideBarThemeImage,
@@ -46,100 +64,138 @@ const Layout = (props) => {
     topbarTheme,
     showRightSidebar,
     leftSideBarTheme,
-    layoutModeType
+    layoutModeType,
   } = useSelector(selectLayoutProperties);
 
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  // Check if device is mobile
+  const isMobile = MOBILE_USER_AGENTS.test(navigator.userAgent);
 
-  const toggleMenuCallback = () => {
-    if (leftSideBarType === "default") {
-      dispatch(changeSidebarType("condensed", isMobile));
-    } else if (leftSideBarType === "condensed") {
-      dispatch(changeSidebarType("default", isMobile));
-    }
-  };
+  /**
+   * Toggle sidebar menu between default and condensed modes
+   */
+  const handleToggleMenu = useCallback(() => {
+    const newType = leftSideBarType === LAYOUT_TYPES.DEFAULT
+      ? LAYOUT_TYPES.CONDENSED
+      : LAYOUT_TYPES.DEFAULT;
 
-  //hides right sidebar on body click
-  const hideRightbar = (event) => {
-    var rightbar = document.getElementById("right-bar");
-    //if clicked in inside right bar, then do nothing
+    dispatch(changeSidebarType(newType, isMobile));
+  }, [leftSideBarType, isMobile, dispatch]);
+
+  /**
+   * Hide right sidebar when clicking outside of it
+   */
+  const hideRightSidebar = useCallback((event) => {
+    const rightbar = document.getElementById("right-bar");
+
     if (rightbar && rightbar.contains(event.target)) {
       return;
-    } else {
-      //if clicked in outside of rightbar then fire action for hide rightbar
-      dispatch(showRightSidebarAction(false));
     }
-  };
 
-  /*
-  layout  settings
-  */
+    dispatch(showRightSidebarAction(false));
+  }, [dispatch]);
 
-  useEffect(() => {
-    //init body click event fot toggle rightbar
-    document.body.addEventListener("click", hideRightbar, true);
+  /**
+   * Initialize preloader with animation
+   */
+  const initializePreloader = useCallback(() => {
+    const preloader = document.getElementById("preloader");
+    const status = document.getElementById("status");
 
-    if (isPreloader === true) {
-      document.getElementById("preloader").style.display = "block";
-      document.getElementById("status").style.display = "block";
+    if (isPreloader && preloader && status) {
+      preloader.style.display = "block";
+      status.style.display = "block";
 
-      setTimeout(function () {
-        document.getElementById("preloader").style.display = "none";
-        document.getElementById("status").style.display = "none";
-      }, 2500);
-    } else {
-      document.getElementById("preloader").style.display = "none";
-      document.getElementById("status").style.display = "none";
+      setTimeout(() => {
+        if (preloader && status) {
+          preloader.style.display = "none";
+          status.style.display = "none";
+        }
+      }, PRELOADER_DURATION);
+    } else if (preloader && status) {
+      preloader.style.display = "none";
+      status.style.display = "none";
     }
   }, [isPreloader]);
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  useEffect(() => {
+  /**
+   * Apply layout configurations from Redux
+   */
+  const applyLayoutConfigurations = useCallback(() => {
+    // Set initial layout
     dispatch(changeLayout("vertical"));
-  }, [dispatch]);
 
-  useEffect(() => {
+    // Apply sidebar theme
     if (leftSideBarTheme) {
       dispatch(changeSidebarTheme(leftSideBarTheme));
     }
-  }, [leftSideBarTheme, dispatch]);
 
-  useEffect(() => {
+    // Apply layout mode
     if (layoutModeType) {
       dispatch(changeLayoutMode(layoutModeType));
     }
-  }, [layoutModeType, dispatch]);
 
-  useEffect(() => {
+    // Apply sidebar theme image
     if (leftSideBarThemeImage) {
       dispatch(changeSidebarThemeImage(leftSideBarThemeImage));
     }
-  }, [leftSideBarThemeImage, dispatch]);
 
-  useEffect(() => {
+    // Apply layout width
     if (layoutWidth) {
       dispatch(changeLayoutWidth(layoutWidth));
     }
-  }, [layoutWidth, dispatch]);
 
-  useEffect(() => {
+    // Apply sidebar type
     if (leftSideBarType) {
       dispatch(changeSidebarType(leftSideBarType));
     }
-  }, [leftSideBarType, dispatch]);
 
-  useEffect(() => {
+    // Apply topbar theme
     if (topbarTheme) {
       dispatch(changeTopbarTheme(topbarTheme));
     }
-  }, [topbarTheme, dispatch]);
+  }, [
+    dispatch,
+    leftSideBarTheme,
+    layoutModeType,
+    leftSideBarThemeImage,
+    layoutWidth,
+    leftSideBarType,
+    topbarTheme,
+  ]);
+
+  // Effects
+
+  /**
+   * Initialize component
+   */
+  useEffect(() => {
+    // Scroll to top on route change
+    window.scrollTo(0, 0);
+
+    // Apply layout configurations
+    applyLayoutConfigurations();
+  }, [applyLayoutConfigurations]);
+
+  /**
+   * Handle preloader and right sidebar click events
+   */
+  useEffect(() => {
+    // Initialize preloader
+    initializePreloader();
+
+    // Add click event listener for right sidebar
+    document.body.addEventListener("click", hideRightSidebar, true);
+
+    // Cleanup event listener
+    return () => {
+      document.body.removeEventListener("click", hideRightSidebar, true);
+    };
+  }, [isPreloader, initializePreloader, hideRightSidebar]);
 
   return (
     <React.Fragment>
-      <div id="preloader">
+      {/* Preloader */}
+      <div id="preloader" role="status" aria-label="Loading">
         <div id="status">
           <div className="spinner-chase">
             <div className="chase-dot" />
@@ -152,36 +208,55 @@ const Layout = (props) => {
         </div>
       </div>
 
+      {/* Main Layout */}
       <div id="layout-wrapper">
-        <Header toggleMenuCallback={toggleMenuCallback} />
+        <Header
+          toggleMenuCallback={handleToggleMenu}
+          aria-label="Main navigation"
+        />
+
         <Sidebar
           theme={leftSideBarTheme}
           type={leftSideBarType}
           isMobile={isMobile}
+          aria-label="Sidebar navigation"
         />
-        <div className="main-content">{props.children}</div>
+
+        <main className="main-content" role="main">
+          {props.children}
+        </main>
+
         <Footer />
       </div>
-      {showRightSidebar ? <RightSidebar /> : null}
+
+      {/* Right Sidebar - Conditionally Rendered */}
+      {showRightSidebar && <RightSidebar />}
     </React.Fragment>
   );
 };
 
+// Prop Types
 Layout.propTypes = {
+  children: PropTypes.node.isRequired,
   changeLayoutWidth: PropTypes.func,
   changeSidebarTheme: PropTypes.func,
   changeSidebarThemeImage: PropTypes.func,
   changeSidebarType: PropTypes.func,
   changeTopbarTheme: PropTypes.func,
-  // children: PropTypes.object,
-  isPreloader: PropTypes.any,
-  layoutWidth: PropTypes.any,
-  leftSideBarTheme: PropTypes.any,
-  leftSideBarThemeImage: PropTypes.any,
-  leftSideBarType: PropTypes.any,
+  isPreloader: PropTypes.bool,
+  layoutWidth: PropTypes.string,
+  leftSideBarTheme: PropTypes.string,
+  leftSideBarThemeImage: PropTypes.string,
+  leftSideBarType: PropTypes.string,
   location: PropTypes.object,
-  showRightSidebar: PropTypes.any,
-  topbarTheme: PropTypes.any,
+  showRightSidebar: PropTypes.bool,
+  topbarTheme: PropTypes.string,
+};
+
+// Default Props
+Layout.defaultProps = {
+  isPreloader: false,
+  showRightSidebar: false,
 };
 
 export default withRouter(Layout);

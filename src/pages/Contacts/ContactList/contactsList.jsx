@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { Link } from "react-router-dom";
 import withRouter from "../../../components/Common/withRouter";
 import TableContainer from "../../../components/Common/TableContainer";
 import Spinner from "../../../components/Common/Spinner";
@@ -84,7 +83,7 @@ const apiService = {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData.message ||
-            `Failed to update contact. Status: ${response.status}`,
+          `Failed to update contact. Status: ${response.status}`,
         );
       }
 
@@ -259,10 +258,10 @@ const ContactsList = () => {
               prevContacts.map((contact) =>
                 contact._id === selectedContact._id
                   ? {
-                      ...contact,
-                      status: values.status,
-                      notes: values.notes,
-                    }
+                    ...contact,
+                    status: values.status,
+                    notes: values.notes,
+                  }
                   : contact,
               ),
             );
@@ -547,16 +546,30 @@ const ContactsList = () => {
 
           {/* Success Message */}
           {successMessage && (
-            <Alert color="success" className="mb-3">
+            <div className="alert alert-success alert-dismissible fade show mb-3" role="alert">
+              <i className="mdi mdi-check-circle-outline me-2"></i>
               {successMessage}
-            </Alert>
+              <button 
+                type="button" 
+                className="btn-close" 
+                onClick={() => setSuccessMessage("")}
+                aria-label="Close"
+              ></button>
+            </div>
           )}
 
           {/* Error Message */}
           {error && (
-            <Alert color="danger" className="mb-3">
+            <div className="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+              <i className="mdi mdi-alert-circle-outline me-2"></i>
               {error}
-            </Alert>
+              <button 
+                type="button" 
+                className="btn-close" 
+                onClick={() => setError(null)}
+                aria-label="Close"
+              ></button>
+            </div>
           )}
 
           <Row className="mb-3">
@@ -596,7 +609,9 @@ const ContactsList = () => {
 
                   {isLoading ? (
                     <div className="text-center my-5">
-                      <Spinner />
+                      <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
                       <p className="mt-2">Loading contact messages...</p>
                     </div>
                   ) : (

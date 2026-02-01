@@ -10,6 +10,7 @@ import { connect } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import avatar from "../../../assets/images/users/avatar-1.jpg";
+import { clearSession, getAuthToken, getUserData, isSessionValid } from "../../../utils/axiosInstance";
 
 const ProfileMenu = ({ t, success }) => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -23,77 +24,67 @@ const ProfileMenu = ({ t, success }) => {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const saved = localStorage.getItem("authUser");
-
-        if (!saved) {
-          return;
-        }
-
-        const parsed = JSON.parse(saved);
-        const token = parsed?.token;
-
-        // Check token expiry
-        if (!parsed.expiresAt || Date.now() < parsed.expiresAt) {
-          // Set initial data from localStorage
-          const localUser = parsed.user || {};
-          setUsername(localUser.name || localUser.email || "Guest");
-          setRole(localUser.role || "");
-          setAvatarUrl(localUser.avatarUrl || localUser.avatar || "");
-
-          // Fetch updated user data from API if token exists
-          if (token) {
-            setLoading(true);
-            try {
-              const res = await axios.get(
-                "https://shekhai-server.onrender.com/api/v1/users/me",
-                {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                }
-              );
-
-              if (res.data.success && res.data.user) {
-                const userData = res.data.user;
-
-                // Update states with API data
-                setUsername(userData.name || userData.email || "Guest");
-                setRole(userData.role || "");
-
-                // Try different possible avatar fields
-                const possibleAvatarFields = [
-                  "avatarUrl",
-                  "avatar",
-                  "profileImage",
-                  "image",
-                  "profilePicture",
-                  "picture",
-                ];
-
-                for (const field of possibleAvatarFields) {
-                  if (userData[field]) {
-                    setAvatarUrl(userData[field]);
-                    break;
-                  }
-                }
-              }
-            } catch (apiErr) {
-              console.error("API fetch error:", apiErr);
-              // Keep using localStorage data if API fails
-            } finally {
-              setLoading(false);
-            }
-          }
-        } else {
-          // Expired token
-          localStorage.removeItem("authUser");
+        // Check if session is valid
+        if (!isSessionValid()) {
+          clearSession();
           setUsername("Guest");
           setRole("");
           setAvatarUrl("");
+          return;
         }
-      } catch (parseErr) {
-        console.error("Error parsing auth data:", parseErr);
-        localStorage.removeItem("authUser");
+
+        // Get initial data from localStorage
+        const localUser = getUserData() || {};
+        setUsername(localUser.name || localUser.email || "Guest");
+        setRole(localUser.role || "");
+        setAvatarUrl(localUser.avatarUrl || localUser.avatar || "");
+
+        // Fetch updated data from API
+        const token = getAuthToken();
+        if (token) {
+          setLoading(true);
+          try {
+            const res = await axios.get(
+              "https://shekhai-server.onrender.com/api/v1/users/me",
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (res.data.success && res.data.user) {
+              const userData = res.data.user;
+              setUsername(userData.name || userData.email || "Guest");
+              setRole(userData.role || "");
+
+              // Try different possible avatar fields
+              const possibleAvatarFields = [
+                "avatarUrl",
+                "avatar",
+                "profileImage",
+                "image",
+                "profilePicture",
+                "picture",
+              ];
+
+              for (const field of possibleAvatarFields) {
+                if (userData[field]) {
+                  setAvatarUrl(userData[field]);
+                  break;
+                }
+              }
+            }
+          } catch (apiErr) {
+            console.error("API fetch error:", apiErr);
+            // Keep using localStorage data
+          } finally {
+            setLoading(false);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        clearSession();
         setUsername("Guest");
         setRole("");
         setAvatarUrl("");
@@ -104,8 +95,8 @@ const ProfileMenu = ({ t, success }) => {
   }, [success]);
 
   const handleLogout = () => {
-    localStorage.removeItem("authUser");
-    navigate("/login");
+    clearSession();
+    navigate("/login", { replace: true });
   };
 
   return (

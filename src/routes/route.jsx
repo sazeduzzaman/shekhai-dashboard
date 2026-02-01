@@ -1,12 +1,11 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
+import { isSessionValid } from "../utils/axiosInstance";
 
 const Authmiddleware = ({ children }) => {
-  // Check localStorage first
-  const authUser = JSON.parse(localStorage.getItem("authUser") || "null");
-
-  if (!authUser || !authUser.token) {
-    // Token missing → redirect to login
+  if (!isSessionValid()) {
+    // Clear any invalid session data
+    localStorage.removeItem("authUser");
     return <Navigate to="/login" replace />;
   }
 

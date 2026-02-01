@@ -156,7 +156,7 @@ const ContactsProfile = (props) => {
                   <div className="table-responsive">
                     <Table className="table-nowrap mb-0">
                       <tbody>
-                        <tr>
+                        <tr>  
                           <th scope="row">Full Name :</th>
                           <td>{userProfile.name}</td>
                         </tr>

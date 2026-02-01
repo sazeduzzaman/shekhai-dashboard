@@ -1,5 +1,10 @@
-// src/utils/auth.js
-export const logoutUser = (navigate) => {
-  localStorage.removeItem("authUser");
-  navigate("/login", { replace: true });
+import { clearSession } from "./axiosInstance";
+
+export const logout = (navigate) => {
+  clearSession();
+  if (navigate) {
+    navigate("/login", { replace: true });
+  } else {
+    window.location.href = "/login";
+  }
 };
