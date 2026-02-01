@@ -133,7 +133,7 @@ const Login = () => {
 
       {/* Animated Background */}
       <div className="animated-bg">
-        {[...Array(20)].map((_, i) => (
+        {[...Array(10000)].map((_, i) => (
           <div key={i} className="particle" />
         ))}
       </div>
@@ -155,18 +155,17 @@ const Login = () => {
                 </div>
 
                 <h1 className="hero-title display-4 fw-bold mb-3">
-                  Welcome to <span className="gradient-text">Shekhai LMS</span>
+                  <span className="gradient-text">Shekhai LMS</span>
                 </h1>
 
                 <p className="hero-subtitle fs-5 text-white">
-                  Transform your learning experience with our comprehensive
-                  Learning Management System
+                  Transform your learning experience
                 </p>
               </div>
             </div>
             <div className="login-card-container d-flex justify-content-center mx-auto">
               <div className="login-card">
-                <div className="card-header text-center mb-4 border-0">
+                <div className="card-header text-center pb-4 border-0">
                   <div className="avatar-circle bg-gradient-primary mb-3">
                     <User size={28} className="text-white" />
                   </div>
@@ -184,7 +183,7 @@ const Login = () => {
                   </div>
                 )}
 
-                <form onSubmit={formik.handleSubmit} className="px-4">
+                <form onSubmit={formik.handleSubmit} className="px-4 bg-white pt-4 pb-2">
                   {/* Email Input */}
                   <div className="form-group mb-4">
                     <label className="form-label fw-medium mb-2 d-flex align-items-center">
@@ -293,7 +292,7 @@ const Login = () => {
       <style>{`
         .login-wrapper {
           min-height: 100vh;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+          background: linear-gradient(135deg, #00193d 10%, #001430 50%, #001430 100%);
           position: relative;
           overflow: hidden;
           display:flex;
@@ -436,16 +435,14 @@ const Login = () => {
         }
 
         .login-card {
-          background: white;
           border-radius: 24px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
           overflow: hidden;
           backdrop-filter: blur(10px);
         }
 
         .card-header {
           padding: 40px 40px 20px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #667eea 0%, #001430 100%);
           color: white;
         }
 
