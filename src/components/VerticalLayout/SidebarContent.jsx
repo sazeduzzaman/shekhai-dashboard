@@ -146,12 +146,12 @@ const SidebarContent = ({ t }) => {
                       {t("My Courses")}
                     </Link>
                   </li>
-                  <li>
+                  {/* <li>
                     <Link to="/student/continue-courses">
                       <PlayCircle size={16} className="me-2" />
                       {t("Continue Learning")}
                     </Link>
-                  </li>
+                  </li> */}
                   <li>
                     <Link to="/student/browse-courses">
                       <Globe size={16} className="me-2" />
@@ -318,6 +318,17 @@ const SidebarContent = ({ t }) => {
                   </li>
                   <li>
                     <Link to="/courses/approval">{t("Approval Queue")}</Link>
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <Link to="/#" className="has-arrow">
+                  <BookOpen size={18} className="align-middle me-2" />
+                  <span>{t("Enrollments")}</span>
+                </Link>
+                <ul className="sub-menu">
+                  <li>
+                    <Link to="/student/enrollements">{t("All Enrollments")}</Link>
                   </li>
                 </ul>
               </li>

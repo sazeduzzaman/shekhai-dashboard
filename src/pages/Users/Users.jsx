@@ -18,6 +18,7 @@ import { toast, ToastContainer } from "react-toastify";
 import userAvatar from "../../assets/images/users/avatar-1.jpg";
 import "react-toastify/dist/ReactToastify.css";
 import "./Users.css";
+import { User } from "lucide-react";
 
 const Users = () => {
   const [instructors, setUsers] = useState([]);
@@ -159,6 +160,7 @@ const Users = () => {
       item.name?.toLowerCase().includes(search.toLowerCase()) ||
       item.role?.toLowerCase().includes(search.toLowerCase())
   );
+  console.log(filteredData)
 
   return (
     <div className="page-content">
@@ -193,6 +195,7 @@ const Users = () => {
                   <thead className="table-light">
                     <tr>
                       <th>#</th>
+                      <th>Image</th>
                       <th>Name</th>
                       <th>Email</th>
                       <th>Create At</th>
@@ -213,6 +216,21 @@ const Users = () => {
                       filteredData.map((item, index) => (
                         <tr key={item._id}>
                           <td>{index + 1}</td>
+                          <td>
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="rounded-circle"
+                                width="40"
+                                height="40"
+                              />
+                            ) : (
+                              <div className="bg-light rounded-circle d-flex align-items-center justify-content-center" style={{ width: "40px", height: "40px" }}>
+                                <User size={18} className="text-muted" />
+                              </div>
+                            )}
+                          </td>
                           <td>{item.name}</td>
                           <td>{item.email}</td>
                           <td>

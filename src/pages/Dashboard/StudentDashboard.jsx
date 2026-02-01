@@ -27,26 +27,26 @@ import {
   Book,
   FilePlus,
   Clock as ClockIcon,
-  Eye,
   MoreVertical,
   Activity,
   Zap,
   Shield,
 } from "react-feather";
+import MyCourses from "./Student/MyCourses";
 
 const StudentDashboard = ({ user, token }) => {
   const [dashboardData, setDashboardData] = useState({
     enrolledCourses: 6,
     completedCourses: 3,
     averageScore: 85,
-    studyHours: 42,
+    studyHours: 0,
     pendingAssignments: 2,
     upcomingExams: 1,
     streakDays: 7,
-    rank: "Gold",
+    rank: "Starter",
     totalXP: 1250,
     level: 5,
-    nextLevelXP: 1500,
+    nextLevelXP: 500,
     weeklyProgress: 65,
     certificates: 3,
     forumPosts: 24,
@@ -474,67 +474,7 @@ const StudentDashboard = ({ user, token }) => {
                   </div>
                 </div>
 
-                <div className="row">
-                  {enrolledCourses.map((course) => (
-                    <Col md="6" lg="4" className="mb-3" key={course.id}>
-                      <Card className="h-100 border">
-                        <div
-                          className={`bg-${course.thumbnailColor}-subtle p-3 text-center`}
-                        >
-                          <div className="avatar-lg mx-auto mb-2">
-                            <div
-                              className={`rounded-circle bg-${course.thumbnailColor} d-flex align-items-center justify-content-center`}
-                              style={{ width: "60px", height: "60px" }}
-                            >
-                              <BookOpen size={24} className="text-white" />
-                            </div>
-                          </div>
-                          <h6 className="mb-1">{course.title}</h6>
-                          <small className="text-muted">
-                            {course.category}
-                          </small>
-                        </div>
-                        <CardBody className="p-3">
-                          <div className="d-flex justify-content-between align-items-center mb-2">
-                            <small className="text-muted">Progress</small>
-                            <small className="fw-bold">
-                              {course.progress}%
-                            </small>
-                          </div>
-                          <Progress
-                            value={course.progress}
-                            className="mb-3"
-                            style={{ height: "6px" }}
-                          />
-                          <div className="d-flex justify-content-between align-items-center mb-3">
-                            <small className="text-muted">
-                              <Clock size={12} className="me-1" />
-                              {course.duration}
-                            </small>
-                            <Badge color="warning" pill>
-                              <Star size={10} className="me-1" />
-                              {course.rating}
-                            </Badge>
-                          </div>
-                          <div className="d-flex justify-content-between">
-                            <Button
-                              color="primary"
-                              size="sm"
-                              tag={Link}
-                              // to={`/student/course/${course.id}`}
-                              to={"/student/continue-courses"}
-                            >
-                              Continue
-                            </Button>
-                            <Button color="outline-secondary" size="sm">
-                              <Eye size={14} />
-                            </Button>
-                          </div>
-                        </CardBody>
-                      </Card>
-                    </Col>
-                  ))}
-                </div>
+                <MyCourses enrolledCourses={enrolledCourses} />
               </CardBody>
             </Card>
 

@@ -86,6 +86,7 @@ import MentorRoomManagement from "../pages/MentorRoom/MentorRoomManagement";
 // Home Page Management
 // ==============================
 import HomePageManagement from "../pages/HomePage/HomePageManagement";
+import Enrollments from "../pages/Enrollements/Enrollements";
 
 // ======================================================================
 // 🔒 AUTH PROTECTED ROUTES
@@ -125,10 +126,12 @@ const authProtectedRoutes = [
 
   // Student Portal
   { path: "/student/my-courses", component: <MyCourses /> },
-  { path: "/student/continue-courses", component: <ContinueCourses /> },
+  // { path: "/student/continue-courses", component: <ContinueCourses /> },
+  { path: "/student/continue-courses/:courseId", component: <ContinueCourses /> },
   { path: "/student/browse-courses", component: <BrowseCourses /> },
   { path: "/student/certificates", component: <Certificates /> },
   { path: "/student/assignments", component: <Assignments /> },
+  { path: "/student/enrollements", component: <Enrollments /> },
 
   // Instructor Portal
   { path: "/instructor/courses", component: <InstructorCourses /> },

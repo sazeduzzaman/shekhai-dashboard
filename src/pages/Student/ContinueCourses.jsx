@@ -6,19 +6,19 @@ import {
   Clock,
   FileText,
   Lock,
-  Settings,
-  Maximize,
-  Pause,
   Play,
   ChevronLeft,
-  Volume2,
   Download,
   Star,
   BookOpen,
   ThumbsUp,
   ChevronDown,
   ChevronRight,
+  Loader,
+  AlertCircle,
+  Users
 } from "react-feather";
+import axios from "axios";
 
 const ContinueCourses = () => {
   const { courseId, lessonId } = useParams();
@@ -35,371 +35,311 @@ const ContinueCourses = () => {
     seeking: false,
   });
 
+  const [course, setCourse] = useState(null);
+  const [syllabusModules, setSyllabusModules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [showNotes, setShowNotes] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
-  const [courseProgress, setCourseProgress] = useState(24);
+  const [courseProgress, setCourseProgress] = useState(0);
   const [currentVideoUrl, setCurrentVideoUrl] = useState("");
-  const [expandedModules, setExpandedModules] = useState([1, 2]); // Module IDs that are expanded by default
+  const [expandedModules, setExpandedModules] = useState([]);
+  const [resources, setResources] = useState([]);
+  const [currentLesson, setCurrentLesson] = useState(null);
 
-  // Course Data
-  const course = {
-    id: courseId,
-    title: "React Fundamentals Masterclass",
-    instructor: {
-      name: "Sarah Johnson",
-      role: "Senior Frontend Engineer @ Vercel",
-      rating: 4.9,
-      students: 12450,
-      avatar: "SJ",
-    },
-    category: "Web Development",
-    level: "Beginner",
-    duration: "12h 30m",
-    lessons: 48,
-    rating: 4.8,
-    enrolled: 12450,
+  // Get user token for API calls
+  const getUserToken = () => {
+    try {
+      const authUser = localStorage.getItem("authUser");
+      if (authUser) {
+        const userData = JSON.parse(authUser);
+        return userData.token;
+      }
+    } catch (err) {
+      console.log("Error parsing token:", err);
+    }
+    return null;
   };
 
-  // Nested Syllabus Data with Modules
-  const syllabusModules = [
-    {
-      id: 1,
-      title: "Module 1: React Fundamentals",
-      description: "Learn the core concepts of React",
-      duration: "2h 15m",
-      status: "completed",
-      items: [
+  // Get user email
+  const getUserEmail = () => {
+    try {
+      const authUser = localStorage.getItem("authUser");
+      if (authUser) {
+        const userData = JSON.parse(authUser);
+        return userData.user?.email || userData.email;
+      }
+    } catch (err) {
+      console.log("Error parsing user data:", err);
+    }
+    return null;
+  };
+
+  // Fetch course data
+  useEffect(() => {
+    const fetchCourseData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const token = getUserToken();
+
+        // Fetch course details
+        const courseResponse = await axios.get(
+          `https://shekhai-server.onrender.com/api/v1/courses/${courseId}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": token ? `Bearer ${token}` : ""
+            }
+          }
+        );
+
+        console.log("Course API Response:", courseResponse.data);
+
+        if (courseResponse.data.success) {
+          const courseData = courseResponse.data.course || courseResponse.data.data;
+          
+          // Handle category array
+          const category = courseData.category;
+          const categoryText = Array.isArray(category) 
+            ? category.map(c => c.name || c.title || "General").join(", ")
+            : category || "General";
+          
+          // Set course data
+          setCourse({
+            id: courseData._id || courseData.id,
+            title: courseData.title || "Untitled Course",
+            description: courseData.longDescription || courseData.shortDescription || courseData.description || "",
+            instructor: {
+              name: courseData.instructor?.name || "Expert Instructor",
+              email: courseData.instructor?.email || "",
+              role: courseData.instructor?.role || "Course Instructor",
+              rating: 4.9,
+              avatar: getInitials(courseData.instructor?.name || "EI")
+            },
+            category: categoryText,
+            level: courseData.level || "Beginner",
+            duration: `${courseData.totalDuration || 10}h`,
+            rating: 4.5, // Default rating
+            enrolled: courseData.enrolledStudents || 0,
+            price: courseData.price || 0,
+            bannerUrl: courseData.bannerUrl || courseData.image
+          });
+
+          // Fetch enrollment progress for this course
+          await fetchEnrollmentProgress(courseData._id || courseData.id, token);
+
+          // Generate syllabus from course data
+          generateSyllabus(courseData);
+
+          // Fetch or generate resources
+          fetchResources(courseData);
+
+        } else {
+          setError("Failed to load course details");
+        }
+      } catch (err) {
+        console.error("Error fetching course data:", err);
+        setError(err.response?.data?.message || "Failed to load course. Please try again.");
+        
+        // Fallback to demo data
+        setCourse(getDemoCourse());
+        generateDemoSyllabus();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourseData();
+  }, [courseId]);
+
+  // Get initials for avatar
+  const getInitials = (name) => {
+    if (!name) return "EI";
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Fetch enrollment progress
+  const fetchEnrollmentProgress = async (courseId, token) => {
+    try {
+      const userEmail = getUserEmail();
+      if (!userEmail) return;
+
+      const response = await axios.get(
+        `https://shekhai-server.onrender.com/api/v1/enrollments/student/${userEmail}`,
         {
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": token ? `Bearer ${token}` : ""
+          }
+        }
+      );
+
+      if (response.data.success && response.data.data) {
+        const enrollment = response.data.data.find(
+          (enroll) => enroll.courseId === courseId
+        );
+        
+        if (enrollment) {
+          setCourseProgress(enrollment.progress || 0);
+          
+          // If there's a specific lesson to load
+          if (lessonId) {
+            handleLessonSelect(parseInt(lessonId));
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching enrollment progress:", err);
+    }
+  };
+
+  // Generate syllabus from course data
+  const generateSyllabus = (courseData) => {
+    // Use modules from course data
+    const modules = courseData.modules || [];
+    
+    const syllabus = modules.map((module, index) => ({
+      id: index + 1,
+      title: module.title || module.name || `Module ${index + 1}`,
+      description: module.description || "",
+      duration: module.duration || "1h",
+      status: index === 0 ? "current" : "locked",
+      items: (module.lessons || module.videos || []).map((lesson, lessonIndex) => ({
+        id: parseInt(`${index + 1}${lessonIndex + 1}`.padStart(3, '0')),
+        title: lesson.title || `Lesson ${lessonIndex + 1}`,
+        duration: lesson.duration || "10:00",
+        status: index === 0 && lessonIndex === 0 ? "current" : "locked",
+        type: lesson.type || "video",
+        resources: lesson.resources || 0,
+        videoUrl: lesson.videoUrl || lesson.url || null,
+        description: lesson.description || ""
+      }))
+    }));
+
+    // If no modules in course data, create a default module
+    if (syllabus.length === 0) {
+      const defaultSyllabus = [{
+        id: 1,
+        title: "Course Content",
+        description: "All course lessons",
+        duration: `${courseData.totalDuration || 10}h`,
+        status: "current",
+        items: [{
           id: 101,
-          title: "Introduction to React Ecosystem",
-          duration: "05:20",
-          status: "completed",
-          type: "video",
-          resources: 2,
-          videoUrl:
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-        },
-        {
-          id: 102,
-          title: "Understanding JSX & Virtual DOM",
-          duration: "15:45",
-          status: "completed",
-          type: "video",
-          resources: 1,
-          videoUrl:
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-        },
-        {
-          id: 103,
-          title: "Practice: Your First Component",
+          title: "Introduction",
           duration: "10:00",
-          status: "completed",
-          type: "practice",
-          resources: 0,
-          videoUrl: null,
-        },
-      ],
-    },
-    {
-      id: 2,
-      title: "Module 2: Environment & Setup",
-      description: "Set up a professional development environment",
-      duration: "1h 45m",
-      status: "current",
-      items: [
-        {
-          id: 201,
-          title: "Setting up Modern React Environment",
-          duration: "12:45",
           status: "current",
           type: "video",
-          resources: 3,
-          videoUrl:
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
-        },
-        {
-          id: 202,
-          title: "Vite Configuration Deep Dive",
-          duration: "18:30",
-          status: "locked",
-          type: "video",
-          resources: 4,
-          videoUrl:
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-        },
-        {
-          id: 203,
-          title: "ESLint & Prettier Setup",
-          duration: "14:20",
-          status: "locked",
-          type: "video",
-          resources: 2,
-          videoUrl:
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
-        },
-      ],
-    },
-    {
-      id: 3,
-      title: "Module 3: Components & Props",
-      description: "Master component creation and data flow",
-      duration: "3h 30m",
-      status: "locked",
-      items: [
-        {
-          id: 301,
-          title: "Understanding Component Lifecycle",
-          duration: "18:30",
-          status: "locked",
-          type: "video",
-          resources: 4,
-          videoUrl:
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-        },
-        {
-          id: 302,
-          title: "Hands-on Practice: Building Components",
-          duration: "25:15",
-          status: "locked",
-          type: "practice",
-          resources: 2,
+          resources: 0,
           videoUrl: null,
-        },
-        {
-          id: 303,
-          title: "Props, State & Re-rendering Explained",
-          duration: "20:40",
-          status: "locked",
-          type: "video",
-          resources: 3,
-          videoUrl:
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-        },
-        {
-          id: 304,
-          title: "Quiz: Components & Props",
-          duration: "15:00",
-          status: "locked",
-          type: "quiz",
-          resources: 1,
-          videoUrl: null,
-        },
-      ],
-    },
-    {
-      id: 4,
-      title: "Module 4: Hooks & State Management",
-      description: "Master React Hooks and state patterns",
-      duration: "4h 15m",
-      status: "locked",
-      items: [
-        {
-          id: 401,
-          title: "React Hooks Deep Dive (useState & useEffect)",
-          duration: "30:00",
-          status: "locked",
-          type: "video",
-          resources: 5,
-          videoUrl:
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
-        },
-        {
-          id: 402,
-          title: "Custom Hooks & Reusability",
-          duration: "16:45",
-          status: "locked",
-          type: "video",
-          resources: 2,
-          videoUrl:
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4",
-        },
-        {
-          id: 403,
-          title: "Handling Events & User Interaction",
-          duration: "14:55",
-          status: "locked",
-          type: "video",
-          resources: 2,
-          videoUrl:
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4",
-        },
-        {
-          id: 404,
-          title: "Forms, Controlled Inputs & Validation",
-          duration: "22:30",
-          status: "locked",
-          type: "practice",
-          resources: 4,
-          videoUrl: null,
-        },
-      ],
-    },
-    {
-      id: 5,
-      title: "Module 5: Advanced Patterns",
-      description: "Learn advanced React patterns and optimization",
-      duration: "2h 45m",
-      status: "locked",
-      items: [
-        {
-          id: 501,
-          title: "Conditional Rendering & Lists",
-          duration: "17:10",
-          status: "locked",
-          type: "video",
-          resources: 3,
-          videoUrl: null,
-        },
-        {
-          id: 502,
-          title: "Performance Optimization Techniques",
-          duration: "19:20",
-          status: "locked",
-          type: "video",
-          resources: 3,
-          videoUrl: null,
-        },
-        {
-          id: 503,
-          title: "Mini Project: Build a Dashboard",
-          duration: "45:00",
-          status: "locked",
-          type: "project",
-          resources: 6,
-          videoUrl: null,
-        },
-        {
-          id: 504,
-          title: "Final Assessment & Certification Quiz",
-          duration: "20:00",
-          status: "locked",
-          type: "quiz",
-          resources: 1,
-          videoUrl: null,
-        },
-      ],
-    },
-    {
-      id: 6,
-      title: "Module 5: Advanced Patterns",
-      description: "Learn advanced React patterns and optimization",
-      duration: "2h 45m",
-      status: "locked",
-      items: [
-        {
-          id: 501,
-          title: "Conditional Rendering & Lists",
-          duration: "17:10",
-          status: "locked",
-          type: "video",
-          resources: 3,
-          videoUrl: null,
-        },
-        {
-          id: 502,
-          title: "Performance Optimization Techniques",
-          duration: "19:20",
-          status: "locked",
-          type: "video",
-          resources: 3,
-          videoUrl: null,
-        },
-        {
-          id: 503,
-          title: "Mini Project: Build a Dashboard",
-          duration: "45:00",
-          status: "locked",
-          type: "project",
-          resources: 6,
-          videoUrl: null,
-        },
-        {
-          id: 504,
-          title: "Final Assessment & Certification Quiz",
-          duration: "20:00",
-          status: "locked",
-          type: "quiz",
-          resources: 1,
-          videoUrl: null,
-        },
-      ],
-    },
-    {
-      id: 7,
-      title: "Module 5: Advanced Patterns",
-      description: "Learn advanced React patterns and optimization",
-      duration: "2h 45m",
-      status: "locked",
-      items: [
-        {
-          id: 501,
-          title: "Conditional Rendering & Lists",
-          duration: "17:10",
-          status: "locked",
-          type: "video",
-          resources: 3,
-          videoUrl: null,
-        },
-        {
-          id: 502,
-          title: "Performance Optimization Techniques",
-          duration: "19:20",
-          status: "locked",
-          type: "video",
-          resources: 3,
-          videoUrl: null,
-        },
-        {
-          id: 503,
-          title: "Mini Project: Build a Dashboard",
-          duration: "45:00",
-          status: "locked",
-          type: "project",
-          resources: 6,
-          videoUrl: null,
-        },
-        {
-          id: 504,
-          title: "Final Assessment & Certification Quiz",
-          duration: "20:00",
-          status: "locked",
-          type: "quiz",
-          resources: 1,
-          videoUrl: null,
-        },
-      ],
-    },
-  ];
-
-  // Resources Data
-  const resources = [
-    { id: 1, name: "Environment Setup Guide.pdf", type: "pdf", size: "2.4 MB" },
-    {
-      id: 2,
-      name: "Vite Configuration Examples.zip",
-      type: "zip",
-      size: "1.8 MB",
-    },
-    {
-      id: 3,
-      name: "ESLint Rules Reference.md",
-      type: "markdown",
-      size: "120 KB",
-    },
-  ];
-
-  // Set current video based on lesson
-  useEffect(() => {
-    // Flatten all items to find the current lesson
-    const allItems = syllabusModules.flatMap((module) => module.items);
-    const currentLesson = allItems.find(
-      (item) => item.id === parseInt(lessonId || "201")
-    );
-    if (currentLesson && currentLesson.videoUrl) {
-      setCurrentVideoUrl(currentLesson.videoUrl);
+          description: "Course introduction"
+        }]
+      }];
+      setSyllabusModules(defaultSyllabus);
+      
+      // Set first video as current
+      if (defaultSyllabus[0].items[0].videoUrl) {
+        setCurrentVideoUrl(defaultSyllabus[0].items[0].videoUrl);
+        setCurrentLesson(defaultSyllabus[0].items[0]);
+      }
+    } else {
+      setSyllabusModules(syllabus);
+      
+      // Expand first module by default
+      if (syllabus.length > 0) {
+        setExpandedModules([1]);
+        
+        // Set first video as current
+        if (syllabus[0].items.length > 0 && syllabus[0].items[0].videoUrl) {
+          setCurrentVideoUrl(syllabus[0].items[0].videoUrl);
+          setCurrentLesson(syllabus[0].items[0]);
+        }
+      }
     }
-  }, [lessonId]);
+  };
+
+  // Fetch resources
+  const fetchResources = (courseData) => {
+    // This would come from your API
+    const demoResources = [
+      { id: 1, name: "Course Materials.pdf", type: "pdf", size: "2.4 MB" },
+      { id: 2, name: "Code Examples.zip", type: "zip", size: "1.8 MB" },
+      { id: 3, name: "Reference Guide.md", type: "markdown", size: "120 KB" },
+    ];
+    setResources(demoResources);
+  };
+
+  // Demo data fallback
+  const getDemoCourse = () => ({
+    id: courseId,
+    title: "Course Content",
+    description: "Learn the fundamentals of this course",
+    instructor: {
+      name: "Expert Instructor",
+      role: "Course Instructor",
+      rating: 4.9,
+      avatar: "EI"
+    },
+    category: "General",
+    level: "Beginner",
+    duration: "10h",
+    rating: 4.5,
+    enrolled: 0,
+  });
+
+  const generateDemoSyllabus = () => {
+    const demoModules = [
+      {
+        id: 1,
+        title: "Module 1: Course Introduction",
+        description: "Get started with the course",
+        duration: "1h",
+        status: "current",
+        items: [
+          {
+            id: 101,
+            title: "Welcome to the Course",
+            duration: "10:00",
+            status: "current",
+            type: "video",
+            resources: 2,
+            videoUrl: null,
+            description: "Introduction to the course"
+          },
+        ],
+      },
+    ];
+    
+    setSyllabusModules(demoModules);
+    setExpandedModules([1]);
+    
+    if (demoModules[0].items.length > 0) {
+      setCurrentLesson(demoModules[0].items[0]);
+    }
+  };
+
+  // Handle lesson selection
+  const handleLessonSelect = (lessonId) => {
+    const allItems = syllabusModules.flatMap((module) => module.items);
+    const selectedLesson = allItems.find((item) => item.id === lessonId);
+    
+    if (selectedLesson) {
+      setCurrentLesson(selectedLesson);
+      if (selectedLesson.videoUrl) {
+        setCurrentVideoUrl(selectedLesson.videoUrl);
+      }
+      
+      // Update URL without page reload
+      navigate(`/student/continue-courses/${courseId}/lesson/${lessonId}`, { replace: true });
+    }
+  };
 
   // Toggle module expansion
   const toggleModule = (moduleId) => {
@@ -410,19 +350,18 @@ const ContinueCourses = () => {
     );
   };
 
-  // Calculate total completed items
+  // Calculate totals
   const getTotalCompleted = () => {
     return syllabusModules
       .flatMap((m) => m.items)
       .filter((item) => item.status === "completed").length;
   };
 
-  // Calculate total items
   const getTotalItems = () => {
     return syllabusModules.flatMap((m) => m.items).length;
   };
 
-  // Logic Handlers
+  // Player handlers
   const handleTogglePlay = () => {
     setPlayerState((prev) => ({ ...prev, playing: !prev.playing }));
   };
@@ -430,7 +369,9 @@ const ContinueCourses = () => {
   const handleSeekChange = (e) => {
     const value = parseFloat(e.target.value);
     setPlayerState((prev) => ({ ...prev, played: value }));
-    playerRef.current.seekTo(value);
+    if (playerRef.current) {
+      playerRef.current.seekTo(value);
+    }
   };
 
   const handleSeekMouseDown = () => {
@@ -439,7 +380,9 @@ const ContinueCourses = () => {
 
   const handleSeekMouseUp = () => {
     setPlayerState((prev) => ({ ...prev, seeking: false }));
-    playerRef.current.seekTo(playerState.played);
+    if (playerRef.current) {
+      playerRef.current.seekTo(playerState.played);
+    }
   };
 
   const handleProgress = (state) => {
@@ -448,25 +391,18 @@ const ContinueCourses = () => {
     }
   };
 
-  const formatTime = (seconds) => {
-    if (isNaN(seconds)) return "00:00";
-    const date = new Date(seconds * 1000);
-    const mm = date.getUTCMinutes().toString().padStart(2, "0");
-    const ss = date.getUTCSeconds().toString().padStart(2, "0");
-    return `${mm}:${ss}`;
-  };
-
   const handleMarkComplete = () => {
     const newProgress = Math.min(100, courseProgress + 2);
     setCourseProgress(newProgress);
 
     const allItems = syllabusModules.flatMap((module) => module.items);
     const currentIndex = allItems.findIndex(
-      (item) => item.id === parseInt(lessonId || "201")
+      (item) => item.id === (currentLesson?.id || parseInt(lessonId || "101"))
     );
+    
     if (currentIndex < allItems.length - 1) {
       const nextLesson = allItems[currentIndex + 1];
-      navigate(`/course/${courseId}/lesson/${nextLesson.id}`);
+      handleLessonSelect(nextLesson.id);
     }
   };
 
@@ -510,6 +446,54 @@ const ContinueCourses = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="container-fluid bg-light min-vh-100 d-flex justify-content-center align-items-center">
+        <div className="text-center">
+          <Loader size={48} className="text-primary mb-3 animate-spin" />
+          <h4 className="text-slate-700">Loading Course...</h4>
+          <p className="text-muted">Please wait while we prepare your learning environment</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container-fluid bg-light min-vh-100 d-flex justify-content-center align-items-center">
+        <div className="text-center p-5">
+          <AlertCircle size={64} className="text-danger mb-3" />
+          <h4 className="text-slate-700 mb-2">Unable to Load Course</h4>
+          <p className="text-muted mb-4">{error}</p>
+          <button
+            className="btn btn-primary me-2"
+            onClick={() => window.location.reload()}
+          >
+            Try Again
+          </button>
+          <button
+            className="btn btn-outline-secondary"
+            onClick={() => navigate("/student/my-courses")}
+          >
+            Back to My Courses
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="container-fluid bg-light min-vh-100 d-flex justify-content-center align-items-center">
+        <div className="text-center">
+          <AlertCircle size={48} className="text-warning mb-3" />
+          <h4 className="text-slate-700">Course Not Found</h4>
+          <p className="text-muted">The course you're looking for doesn't exist or you don't have access to it.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container-fluid bg-light min-vh-100 p-0 mt-5 pt-4 mb-5">
       {/* Top Navigation */}
@@ -520,17 +504,17 @@ const ContinueCourses = () => {
             <div className="d-flex align-items-center me-auto">
               <button
                 className="btn btn-outline-light border me-3 d-flex align-items-center justify-content-center rounded-3"
-                onClick={() => navigate(-1)}
+                onClick={() => navigate("/student/my-courses")}
                 style={{ width: "40px", height: "40px" }}
               >
                 <ChevronLeft size={20} />
               </button>
               <div>
                 <span className="badge bg-primary-subtle text-primary fw-semibold px-3 py-1 small">
-                  Module 02 • Environment
+                  {course.category} • {course.level}
                 </span>
                 <h1 className="h5 fw-bold mb-0 mt-1">
-                  Setting up Modern React Environment
+                  {currentLesson?.title || course.title}
                 </h1>
               </div>
             </div>
@@ -540,14 +524,9 @@ const ContinueCourses = () => {
               <div className="d-none d-md-block">
                 <div className="d-flex align-items-center gap-3">
                   <div>
-                    <small className="text-muted d-block">
-                      Course Progress
-                    </small>
+                    <small className="text-muted d-block">Course Progress</small>
                     <div className="d-flex align-items-center gap-2">
-                      <div
-                        className="progress"
-                        style={{ width: "120px", height: "6px" }}
-                      >
+                      <div className="progress" style={{ width: "120px", height: "6px" }}>
                         <div
                           className="progress-bar bg-primary"
                           style={{ width: `${courseProgress}%` }}
@@ -607,6 +586,7 @@ const ContinueCourses = () => {
                         <div className="text-center">
                           <FileText size={48} className="mb-3" />
                           <p>No video available for this lesson</p>
+                          <p className="small">Content coming soon!</p>
                         </div>
                       </div>
                     )}
@@ -619,28 +599,16 @@ const ContinueCourses = () => {
                 <div className="card-body p-4">
                   {/* Tabs Header */}
                   <ul className="nav nav-tabs border-0 mb-4">
-                    {[
-                      "Overview",
-                      "Resources",
-                      "Discussions",
-                      "Notes",
-                      "Quiz",
-                    ].map((tab) => (
+                    {["Overview", "Resources", "Discussions", "Notes", "Quiz"].map((tab) => (
                       <li className="nav-item" key={tab}>
                         <button
                           className={`nav-link ${
-                            activeTab === tab.toLowerCase()
-                              ? "active border-0"
-                              : "text-muted"
+                            activeTab === tab.toLowerCase() ? "active border-0" : "text-muted"
                           }`}
                           onClick={() => setActiveTab(tab.toLowerCase())}
                           style={{
-                            borderBottom:
-                              activeTab === tab.toLowerCase()
-                                ? "2px solid #6366f1"
-                                : "none",
-                            fontWeight:
-                              activeTab === tab.toLowerCase() ? "600" : "500",
+                            borderBottom: activeTab === tab.toLowerCase() ? "2px solid #6366f1" : "none",
+                            fontWeight: activeTab === tab.toLowerCase() ? "600" : "500",
                           }}
                         >
                           {tab}
@@ -654,97 +622,31 @@ const ContinueCourses = () => {
                     <div>
                       <h3 className="fw-bold mb-3">About this lesson</h3>
                       <p className="text-muted lh-lg mb-4">
-                        In this comprehensive lesson, we dive deep into setting
-                        up a professional React development environment. You'll
-                        learn how to configure Vite for optimal performance, set
-                        up ESLint with React-specific rules, and structure your
-                        project for scalability.
+                        {currentLesson?.description || course.description || "This lesson covers important concepts in the course."}
                       </p>
-
-                      <div className="row mb-4">
-                        <div className="col-md-6">
-                          <ul className="list-unstyled">
-                            <li className="mb-2">
-                              <div className="d-flex align-items-center gap-2">
-                                <CheckCircle
-                                  size={16}
-                                  className="text-success"
-                                />
-                                <span>Configure Vite with React plugin</span>
-                              </div>
-                            </li>
-                            <li className="mb-2">
-                              <div className="d-flex align-items-center gap-2">
-                                <CheckCircle
-                                  size={16}
-                                  className="text-success"
-                                />
-                                <span>
-                                  Set up ESLint with Airbnb configuration
-                                </span>
-                              </div>
-                            </li>
-                          </ul>
-                        </div>
-                        <div className="col-md-6">
-                          <ul className="list-unstyled">
-                            <li className="mb-2">
-                              <div className="d-flex align-items-center gap-2">
-                                <CheckCircle
-                                  size={16}
-                                  className="text-success"
-                                />
-                                <span>Organize project folder structure</span>
-                              </div>
-                            </li>
-                            <li className="mb-2">
-                              <div className="d-flex align-items-center gap-2">
-                                <CheckCircle
-                                  size={16}
-                                  className="text-success"
-                                />
-                                <span>Configure absolute imports</span>
-                              </div>
-                            </li>
-                          </ul>
-                        </div>
-                      </div>
 
                       {/* Instructor Card */}
                       <div className="bg-light p-4 rounded-4">
                         <div className="d-flex align-items-start">
                           <div
                             className="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center me-3"
-                            style={{
-                              width: "60px",
-                              height: "60px",
-                              fontSize: "24px",
-                            }}
+                            style={{ width: "60px", height: "60px", fontSize: "24px" }}
                           >
                             {course.instructor.avatar}
                           </div>
                           <div className="flex-grow-1">
                             <div className="d-flex justify-content-between align-items-start mb-2">
                               <div>
-                                <h5 className="fw-bold mb-1">
-                                  {course.instructor.name}
-                                </h5>
-                                <p className="text-muted small mb-0">
-                                  {course.instructor.role}
-                                </p>
+                                <h5 className="fw-bold mb-1">{course.instructor.name}</h5>
+                                <p className="text-muted small mb-0">{course.instructor.role}</p>
                               </div>
                               <div className="d-flex align-items-center">
                                 <Star size={16} className="text-warning me-1" />
-                                <span className="fw-bold">
-                                  {course.instructor.rating}
-                                </span>
+                                <span className="fw-bold">{course.instructor.rating}</span>
                               </div>
                             </div>
                             <p className="text-muted small mb-0">
-                              Sarah has been teaching React for over 5 years.
-                              She specializes in helping beginners understand
-                              complex concepts through practical, real-world
-                              examples.
+                              {course.instructor.email ? `Email: ${course.instructor.email}` : "Expert instructor with extensive experience."}
                             </p>
                           </div>
                         </div>
@@ -758,26 +660,15 @@ const ContinueCourses = () => {
                       <h4 className="fw-bold mb-4">Lesson Resources</h4>
                       <div className="list-group">
                         {resources.map((resource) => (
-                          <div
-                            key={resource.id}
-                            className="list-group-item border-0 bg-light mb-2 rounded-3"
-                          >
+                          <div key={resource.id} className="list-group-item border-0 bg-light mb-2 rounded-3">
                             <div className="d-flex justify-content-between align-items-center">
                               <div className="d-flex align-items-center gap-3">
                                 <div className="bg-primary-subtle p-2 rounded-3">
-                                  <FileText
-                                    size={20}
-                                    className="text-primary"
-                                  />
+                                  <FileText size={20} className="text-primary" />
                                 </div>
                                 <div>
-                                  <h6 className="fw-bold mb-0">
-                                    {resource.name}
-                                  </h6>
-                                  <small className="text-muted">
-                                    {resource.type.toUpperCase()} •{" "}
-                                    {resource.size}
-                                  </small>
+                                  <h6 className="fw-bold mb-0">{resource.name}</h6>
+                                  <small className="text-muted">{resource.type.toUpperCase()} • {resource.size}</small>
                                 </div>
                               </div>
                               <button className="btn btn-outline-primary btn-sm">
@@ -800,39 +691,7 @@ const ContinueCourses = () => {
                           placeholder="Add a comment or ask a question..."
                           rows="3"
                         ></textarea>
-                        <button className="btn btn-primary">
-                          Post Comment
-                        </button>
-                      </div>
-
-                      <div className="border-top pt-4">
-                        <div className="d-flex mb-3">
-                          <div
-                            className="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center me-3"
-                            style={{ width: "40px", height: "40px" }}
-                          >
-                            AC
-                          </div>
-                          <div className="flex-grow-1">
-                            <div className="d-flex justify-content-between mb-1">
-                              <h6 className="fw-bold mb-0">Alex Chen</h6>
-                              <small className="text-muted">2 hours ago</small>
-                            </div>
-                            <p className="mb-2">
-                              Great explanation of Vite setup! The folder
-                              structure example was very helpful.
-                            </p>
-                            <div className="d-flex gap-3">
-                              <button className="btn btn-link btn-sm p-0 text-decoration-none">
-                                <ThumbsUp size={14} className="me-1" />
-                                Helpful (12)
-                              </button>
-                              <button className="btn btn-link btn-sm p-0 text-decoration-none">
-                                Reply
-                              </button>
-                            </div>
-                          </div>
-                        </div>
+                        <button className="btn btn-primary">Post Comment</button>
                       </div>
                     </div>
                   )}
@@ -842,10 +701,7 @@ const ContinueCourses = () => {
                     <div>
                       <div className="d-flex justify-content-between align-items-center mb-4">
                         <h4 className="fw-bold mb-0">My Notes</h4>
-                        <button
-                          className="btn btn-primary"
-                          onClick={() => setShowNotes(!showNotes)}
-                        >
+                        <button className="btn btn-primary" onClick={() => setShowNotes(!showNotes)}>
                           {showNotes ? "Cancel" : "Add Note"}
                         </button>
                       </div>
@@ -858,13 +714,8 @@ const ContinueCourses = () => {
                             rows="4"
                           ></textarea>
                           <div className="d-flex gap-2">
-                            <button className="btn btn-primary">
-                              Save Note
-                            </button>
-                            <button
-                              className="btn btn-outline-secondary"
-                              onClick={() => setShowNotes(false)}
-                            >
+                            <button className="btn btn-primary">Save Note</button>
+                            <button className="btn btn-outline-secondary" onClick={() => setShowNotes(false)}>
                               Cancel
                             </button>
                           </div>
@@ -872,10 +723,7 @@ const ContinueCourses = () => {
                       ) : (
                         <div className="text-center py-5">
                           <BookOpen size={48} className="text-muted mb-3" />
-                          <p className="text-muted">
-                            No notes yet. Click "Add Note" to start taking
-                            notes.
-                          </p>
+                          <p className="text-muted">No notes yet. Click "Add Note" to start taking notes.</p>
                         </div>
                       )}
                     </div>
@@ -897,32 +745,29 @@ const ContinueCourses = () => {
                     <span className="fw-bold">{courseProgress}%</span>
                   </div>
                   <div className="progress" style={{ height: "8px" }}>
-                    <div
-                      className="progress-bar bg-primary"
-                      style={{ width: `${courseProgress}%` }}
-                    ></div>
+                    <div className="progress-bar bg-primary" style={{ width: `${courseProgress}%` }}></div>
                   </div>
                 </div>
 
                 <div className="row g-2">
                   <div className="col-4">
                     <div className="bg-primary-subtle p-3 rounded-3 text-center">
-                      <div className="fw-bold text-primary fs-4">
-                        {getTotalItems()}
-                      </div>
+                      <div className="fw-bold text-primary fs-4">{getTotalItems()}</div>
                       <small className="text-muted">Lessons</small>
                     </div>
                   </div>
                   <div className="col-4">
                     <div className="bg-success-subtle p-3 rounded-3 text-center">
-                      <div className="fw-bold text-success fs-4">5</div>
-                      <small className="text-muted">Quizzes</small>
+                      <div className="fw-bold text-success fs-4">{syllabusModules.filter(m => m.status === "completed").length}</div>
+                      <small className="text-muted">Modules</small>
                     </div>
                   </div>
                   <div className="col-4">
                     <div className="bg-warning-subtle p-3 rounded-3 text-center">
-                      <div className="fw-bold text-warning fs-4">8</div>
-                      <small className="text-muted">Projects</small>
+                      <div className="fw-bold text-warning fs-4">
+                        {courseProgress}%
+                      </div>
+                      <small className="text-muted">Progress</small>
                     </div>
                   </div>
                 </div>
@@ -937,15 +782,9 @@ const ContinueCourses = () => {
                   </span>
                 </div>
 
-                <div
-                  className="accordion"
-                  style={{ maxHeight: "780px", overflowY: "auto" }}
-                >
+                <div className="accordion" style={{ maxHeight: "780px", overflowY: "auto" }}>
                   {syllabusModules.map((module) => (
-                    <div
-                      key={module.id}
-                      className="accordion-item border-0 mb-2"
-                    >
+                    <div key={module.id} className="accordion-item border-0 mb-2">
                       {/* Module Header */}
                       <div
                         className={`accordion-header p-3 rounded-3 cursor-pointer transition-all ${
@@ -955,39 +794,24 @@ const ContinueCourses = () => {
                             ? "bg-light"
                             : "bg-white border"
                         } ${module.status === "locked" ? "opacity-50" : ""}`}
-                        onClick={() =>
-                          module.status !== "locked" && toggleModule(module.id)
-                        }
+                        onClick={() => module.status !== "locked" && toggleModule(module.id)}
                       >
                         <div className="d-flex align-items-center justify-content-between">
                           <div className="d-flex align-items-center gap-3">
-                            <div className="flex-shrink-0">
-                              {getModuleStatusIcon(module.status)}
-                            </div>
+                            <div className="flex-shrink-0">{getModuleStatusIcon(module.status)}</div>
                             <div>
-                              <h6
-                                className={`fw-bold mb-1 ${
-                                  module.status === "current"
-                                    ? "text-primary"
-                                    : ""
-                                }`}
-                              >
+                              <h6 className={`fw-bold mb-1 ${module.status === "current" ? "text-primary" : ""}`}>
                                 {module.title}
                               </h6>
                               <div className="d-flex align-items-center gap-2">
                                 <small className="text-muted">
-                                  {module.items.length} lessons •{" "}
-                                  {module.duration}
+                                  {module.items.length} lessons • {module.duration}
                                 </small>
                                 {module.status === "completed" && (
-                                  <span className="badge bg-success-subtle text-success small">
-                                    Completed
-                                  </span>
+                                  <span className="badge bg-success-subtle text-success small">Completed</span>
                                 )}
                                 {module.status === "current" && (
-                                  <span className="badge bg-primary-subtle text-primary small">
-                                    In Progress
-                                  </span>
+                                  <span className="badge bg-primary-subtle text-primary small">In Progress</span>
                                 )}
                               </div>
                             </div>
@@ -1010,20 +834,16 @@ const ContinueCourses = () => {
                               <div
                                 key={item.id}
                                 className={`list-group-item border-0 rounded-3 mb-2 cursor-pointer transition-all p-3 ${
-                                  item.status === "current"
+                                  item.id === currentLesson?.id
                                     ? "bg-primary-subtle border border-primary-subtle"
                                     : item.status === "completed"
                                     ? "bg-light"
                                     : "bg-white border"
-                                } ${
-                                  item.status === "locked" ? "opacity-50" : ""
-                                }`}
+                                } ${item.status === "locked" ? "opacity-50" : ""}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (item.status !== "locked") {
-                                    navigate(
-                                      `/course/${courseId}/lesson/${item.id}`
-                                    );
+                                    handleLessonSelect(item.id);
                                   }
                                 }}
                               >
@@ -1033,23 +853,12 @@ const ContinueCourses = () => {
                                   </div>
                                   <div className="flex-grow-1">
                                     <div className="d-flex justify-content-between align-items-start">
-                                      <h6
-                                        className={`fw-bold mb-1 ${
-                                          item.status === "current"
-                                            ? "text-primary"
-                                            : ""
-                                        }`}
-                                      >
+                                      <h6 className={`fw-bold mb-1 ${item.id === currentLesson?.id ? "text-primary" : ""}`}>
                                         {item.title}
                                       </h6>
                                       <div className="d-flex align-items-center gap-1">
-                                        <Clock
-                                          size={12}
-                                          className="text-muted"
-                                        />
-                                        <small className="text-muted">
-                                          {item.duration}
-                                        </small>
+                                        <Clock size={12} className="text-muted" />
+                                        <small className="text-muted">{item.duration}</small>
                                       </div>
                                     </div>
                                     <div className="d-flex align-items-center gap-2">
@@ -1115,56 +924,13 @@ const ContinueCourses = () => {
           border-color: #e9ecef !important;
         }
         
-        .form-range::-webkit-slider-thumb {
-          background: #6366f1;
-          border: 2px solid white;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        .animate-spin {
+          animation: spin 1s linear infinite;
         }
         
-        .form-range::-moz-range-thumb {
-          background: #6366f1;
-          border: 2px solid white;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        input[type="range"] {
-          -webkit-appearance: none;
-          appearance: none;
-          background: transparent;
-          cursor: pointer;
-        }
-        
-        input[type="range"]::-webkit-slider-track {
-          background: rgba(255, 255, 255, 0.3);
-          height: 4px;
-          border-radius: 2px;
-        }
-        
-        input[type="range"]::-moz-range-track {
-          background: rgba(255, 255, 255, 0.3);
-          height: 4px;
-          border-radius: 2px;
-        }
-        
-        .form-select-sm {
-          padding: 0.25rem 2rem 0.25rem 0.5rem;
-          font-size: 0.875rem;
-        }
-        
-        .accordion-item {
-          background: transparent;
-        }
-        
-        .accordion-body {
-          padding: 0.5rem 0;
-        }
-        
-        .ms-4 {
-          margin-left: 1rem;
-        }
-        
-        .ps-2 {
-          padding-left: 0.5rem;
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
