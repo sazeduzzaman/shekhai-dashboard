@@ -134,7 +134,7 @@ const AllCourses = () => {
   const filteredData = courses.filter((course) =>
     course.title.toLowerCase().includes(search.toLowerCase()),
   );
-  console.log(userId, "userId");
+  console.log(filteredData, "filteredData");
   return (
     <div className="page-content">
       <div className="container-fluid">
@@ -248,15 +248,15 @@ const AllCourses = () => {
                                 height: "100px",
                                 objectFit: "cover",
                               }}
-                              src={item.bannerUrl || "/images/bg-ico-hero.jpg"}
+                              // FIX: Use bannerImage.data instead of bannerImage
+                              src={item.bannerImage?.data || "/images/bg-ico-hero.jpg"}
                               alt={item.title}
                               onError={(e) => {
                                 const target = e.currentTarget;
                                 // Only replace if it's not already the fallback
                                 if (
                                   target.src !==
-                                  window.location.origin +
-                                    "/images/bg-ico-hero.jpg"
+                                  window.location.origin + "/images/bg-ico-hero.jpg"
                                 ) {
                                   target.src = "/images/bg-ico-hero.jpg";
                                 }
@@ -288,13 +288,12 @@ const AllCourses = () => {
                           </td>
                           <td>
                             <span
-                              className={`badge bg-${
-                                item.level === "Advanced"
+                              className={`badge bg-${item.level === "Advanced"
                                   ? "danger"
                                   : item.level === "Intermediate"
                                     ? "warning"
                                     : "success"
-                              }`}
+                                }`}
                             >
                               {item.level}
                             </span>
@@ -309,9 +308,8 @@ const AllCourses = () => {
                           </td>
                           <td>
                             <span
-                              className={`badge bg-${
-                                item.published ? "success" : "danger"
-                              }`}
+                              className={`badge bg-${item.published ? "success" : "danger"
+                                }`}
                             >
                               {item.published ? "Active" : "Inactive"}
                             </span>

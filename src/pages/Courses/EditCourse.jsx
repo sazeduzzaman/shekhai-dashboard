@@ -3,317 +3,564 @@
 import React, { useState, useEffect } from "react";
 import { toast, Toaster } from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
-import Select from "react-select";
 import axios from "axios";
 import Breadcrumbs from "../../components/Common/Breadcrumb";
-
-const statusOptions = [
-  { value: true, label: "Published" },
-  { value: false, label: "Unpublished" },
-];
+import EditCourseStepper from "./EditCourseStepper";
+import EditBasicInfoTab from "./EditBasicInfoTab";
+import EditInstructorTab from "./EditInstructorTab";
+import EditContentTab from "./EditContentTab";
+import EditMetadataTab from "./EditMetadataTab";
+import EditMediaTab from "./EditMediaTab";
 
 const EditCourse = () => {
   const navigate = useNavigate();
-  const { id: courseId } = useParams(); // Rename to courseId for clarity
+  const { id: courseId } = useParams();
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [categories, setCategories] = useState([]);
-  const [instructors, setInstructors] = useState([]);
-  const [userRole, setUserRole] = useState(null);
-  const [userId, setUserId] = useState(null);
+  const [activeTab, setActiveTab] = useState("basic");
+  const [completedSteps, setCompletedSteps] = useState([]);
+  const [errors, setErrors] = useState({});
 
-  const [form, setForm] = useState({
+  // Course data state
+  const [courseData, setCourseData] = useState({
     title: "",
     shortDescription: "",
     longDescription: "",
-    instructor: null,
-    price: "",
     category: null,
+    price: "",
+    promotionalPrice: "",
     level: "Beginner",
     enrollmentDeadline: "",
     published: false,
+    language: "English",
+    accessType: "lifetime",
+    certificateIncluded: false,
+    instructor: null,
+    modules: [],
+    tags: [],
+    whatYoullLearn: [],
+    prerequisites: [],
+    subtitles: [],
+    bannerImage: null,
+    bannerUrl: "",
+    thumbnails: [],
+    thumbnailUrls: [],
+    totalDuration: 0,
+    totalLessons: 0,
+    totalQuizzes: 0,
+    totalProjects: 0
   });
 
-  const [modules, setModules] = useState([
-    { title: "", description: "", videoUrl: "", duration: "" },
-  ]);
+  const [categories, setCategories] = useState([]);
+  const [instructors, setInstructors] = useState([]);
+  const [quizzes, setQuizzes] = useState([]);
+  const [userRole, setUserRole] = useState(null);
+  const [userId, setUserId] = useState(null);
 
-  // Files state
-  const [bannerFile, setBannerFile] = useState(null);
-  const [bannerPreview, setBannerPreview] = useState("");
-  const [thumbnailFiles, setThumbnailFiles] = useState([]);
-  const [thumbnailPreviews, setThumbnailPreviews] = useState([]);
-
-  // Existing images from server
-  const [existingBanner, setExistingBanner] = useState("");
-  const [existingThumbnails, setExistingThumbnails] = useState([]);
-
-  // Debug logging
+  // Fetch course data
   useEffect(() => {
-    console.log("EditCourse mounted with courseId:", courseId);
-    console.log("userId from state:", userId);
-    console.log("userRole from state:", userRole);
-  }, [courseId, userId, userRole]);
-
-  // Fetch course data, categories & instructors
-  useEffect(() => {
-    const fetchData = async () => {
-      console.log("Starting fetchData, courseId:", courseId);
-      
+    const fetchCourseData = async () => {
       if (!courseId) {
-        toast.error("No course ID found in URL.");
+        toast.error("No course ID provided");
         navigate("/all-courses");
         return;
       }
 
       const stored = localStorage.getItem("authUser");
-      console.log("LocalStorage authUser exists:", !!stored);
-
       if (!stored) {
-        toast.error("You are not logged in.");
+        toast.error("You are not logged in");
         navigate("/login");
         return;
       }
 
       try {
         const authData = JSON.parse(stored);
-        console.log("Parsed authData:", authData);
-
         const token = authData?.token;
-
-        if (!token) {
-          toast.error("Invalid session token.");
-          navigate("/login");
-          return;
-        }
-
-        // Get user info
         const user = authData?.user;
-        console.log("User object from localStorage:", user);
 
-        if (!user) {
-          toast.error("User data not found.");
+        if (!token || !user) {
+          toast.error("Invalid session data");
           navigate("/login");
           return;
         }
 
-        const role = user?.role;
-        const currentUserId = user?.id || user?._id; // Try both possible field names
-        console.log("Setting userRole:", role, "userId:", currentUserId);
-        
-        // Set user state
-        setUserRole(role);
-        setUserId(currentUserId);
+        setUserRole(user.role);
+        setUserId(user.id || user._id);
 
-        // Fetch course data FIRST
-        console.log("Fetching course with ID:", courseId);
+        // Fetch course details
         const courseRes = await axios.get(
           `https://shekhai-server.onrender.com/api/v1/courses/${courseId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        console.log("Course API Response:", courseRes.data);
-
-        if (courseRes.data.success) {
-          const course = courseRes.data.course || courseRes.data.data;
-          console.log("Course data received:", course);
-          console.log("Course instructor ID:", course.instructor?._id);
-          console.log("Current user ID:", currentUserId);
-          
-          // TEMPORARILY COMMENT OUT PERMISSION CHECK
-          // if (role === "instructor" && course.instructor?._id !== currentUserId) {
-          //   console.log("Permission denied: instructor mismatch");
-          //   toast.error("You don't have permission to edit this course.");
-          //   navigate("/all-courses");
-          //   return;
-          // }
-
-          // Set existing images
-          setExistingBanner(course.bannerUrl || "");
-          setExistingThumbnails(course.thumbnails || []);
-
-          // Set form data
-          setForm({
-            title: course.title || "",
-            shortDescription: course.shortDescription || "",
-            longDescription: course.longDescription || "",
-            instructor: course.instructor ? {
-              value: course.instructor._id,
-              label: course.instructor.name
-            } : null,
-            price: course.price || "",
-            category: course.category?.[0] ? {
-              value: course.category[0]._id,
-              label: course.category[0].name
-            } : null,
-            level: course.level || "Beginner",
-            enrollmentDeadline: course.enrollmentDeadline 
-              ? course.enrollmentDeadline.split('T')[0] 
-              : "",
-            published: course.published || false,
-          });
-
-          // Set modules
-          if (course.modules && course.modules.length > 0) {
-            setModules(course.modules.map(mod => ({
-              title: mod.title || "",
-              description: mod.description || "",
-              videoUrl: mod.videoUrl || "",
-              duration: mod.duration || "",
-              _id: mod._id // Keep existing ID
-            })));
-          }
-
-          // Fetch categories
-          const categoriesRes = await axios.get(
-            "https://shekhai-server.onrender.com/api/v1/categories",
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-
-          const categoryOptions = categoriesRes.data.categories?.map((cat) => ({
-            value: cat._id,
-            label: cat.name,
-          })) || [];
-
-          setCategories(categoryOptions);
-
-          // Only fetch instructors if user is ADMIN
-          if (role === "admin") {
-            try {
-              const instructorsRes = await axios.get(
-                "https://shekhai-server.onrender.com/api/v1/users?role=instructor",
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
-
-              const instructorOptions = instructorsRes.data.users?.map((instructor) => ({
-                value: instructor._id,
-                label: instructor.name,
-              })) || [];
-
-              setInstructors(instructorOptions);
-            } catch (instructorErr) {
-              console.error("Error fetching instructors:", instructorErr);
-              toast.error("Failed to fetch instructors list.");
-            }
-          }
-
-          setLoading(false);
-          console.log("Data fetch completed successfully");
-        } else {
-          toast.error("Failed to fetch course data.");
+        if (!courseRes.data.success || !courseRes.data.course) {
+          toast.error("Course not found");
           navigate("/all-courses");
+          return;
         }
-      } catch (err) {
-        console.error("Fetch error:", err);
-        console.error("Error details:", err.response?.data);
-        console.error("Error status:", err.response?.status);
-        
-        if (err.response?.status === 401) {
-          toast.error("Session expired. Please login again.");
-          localStorage.removeItem("authUser");
-          navigate("/login");
-        } else if (err.response?.status === 404) {
-          toast.error("Course not found.");
+
+        const course = courseRes.data.course || courseRes.data.data;
+
+        // Check permissions
+        if (user.role === "instructor" && course.instructor?._id !== (user.id || user._id)) {
+          toast.error("You don't have permission to edit this course");
           navigate("/all-courses");
-        } else if (err.response?.status === 403) {
-          toast.error("You don't have permission to access this course.");
-          navigate("/all-courses");
-        } else {
-          toast.error("Error loading course data: " + (err.message || "Unknown error"));
+          return;
         }
+
+        // First fetch quizzes, then transform course data
+        await fetchQuizzes(token);
+        await fetchCategories(token);
+        await fetchInstructors(token);
+
+        // Transform course data with quizzes available
+        transformCourseData(course, quizzes);
         setLoading(false);
+
+      } catch (error) {
+        console.error("Error fetching course:", error);
+        if (error.response?.status === 404) {
+          toast.error("Course not found");
+        } else if (error.response?.status === 403) {
+          toast.error("Access denied");
+        } else {
+          toast.error("Failed to load course data");
+        }
+        navigate("/all-courses");
       }
     };
 
-    fetchData();
+    fetchCourseData();
   }, [courseId, navigate]);
 
-  // Handle form field changes
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+  const fetchCategories = async (token) => {
+    try {
+      const res = await axios.get(
+        "https://shekhai-server.onrender.com/api/v1/categories",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setCategories(res.data.categories?.map(cat => ({
+        value: cat._id,
+        label: cat.name
+      })) || []);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
   };
 
-  const handleSelectChange = (name, value) => {
-    setForm((prev) => ({ ...prev, [name]: value }));
+  const fetchQuizzes = async (token) => {
+    try {
+      const res = await axios.get(
+        "https://shekhai-server.onrender.com/api/v1/quizzes",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Transform quiz data to proper format
+      const formattedQuizzes = (res.data.data || []).map(quiz => ({
+        value: quiz._id,
+        label: quiz.title
+      }));
+
+      setQuizzes(formattedQuizzes);
+      return formattedQuizzes; // Return for use in transformCourseData
+    } catch (error) {
+      console.error("Error fetching quizzes:", error);
+      return [];
+    }
   };
 
-  const handleModuleChange = (index, field, value) => {
-    const updated = [...modules];
-    updated[index][field] = value;
-    setModules(updated);
+  const fetchInstructors = async (token) => {
+    try {
+      const res = await axios.get(
+        "https://shekhai-server.onrender.com/api/v1/users?role=instructor",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const instructorsData = res.data.users || res.data.data || [];
+
+      const formattedInstructors = instructorsData.map(instructor => ({
+        value: instructor._id,
+        label: instructor.name || instructor.username || `Instructor ${instructor._id.slice(-6)}`
+      }));
+
+      setInstructors(formattedInstructors);
+
+    } catch (error) {
+      console.error("Error fetching instructors:", error);
+      toast.error("Failed to load instructors");
+      setInstructors([]);
+    }
   };
 
-  const addModule = () =>
-    setModules((prev) => [
-      ...prev,
-      { title: "", description: "", videoUrl: "", duration: "" },
-    ]);
+  const transformCourseData = (course, quizzesData = []) => {
+    // Format instructor for dropdown
+    let instructor = null;
+    if (course.instructor) {
+      instructor = {
+        value: course.instructor._id,
+        label: course.instructor.name || course.instructor.username || `Instructor ${course.instructor._id.slice(-6)}`
+      };
+    }
 
-  const removeModule = (index) =>
-    setModules((prev) => prev.filter((_, i) => i !== index));
+    // Format category for dropdown
+    const category = course.category?._id ? {
+      value: course.category._id,
+      label: course.category.name
+    } : course.category?.[0]?._id ? {
+      value: course.category[0]._id,
+      label: course.category[0].name
+    } : null;
 
-  // Handle file selection
-  const handleBannerChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Banner image too large (max 5MB)");
-        return;
+    // Transform modules and lessons
+    // Transform modules and lessons
+    const transformedModules = course.modules?.map((module, moduleIndex) => ({
+      _id: module._id || `module_${Date.now()}_${moduleIndex}`,
+      title: module.title || "",
+      description: module.description || "",
+      order: module.order || moduleIndex + 1,
+      status: module.status || "unlocked",
+      lessons: module.lessons?.map((lesson, lessonIndex) => {
+        let quizData = null;
+        // Only set quizId for quiz lessons
+        if (lesson.type === 'quiz' && lesson.quizId) {
+          const quiz = quizzesData.find(q => q.value === lesson.quizId);
+          if (quiz) {
+            quizData = quiz;
+          }
+        }
+
+        const lessonObj = {
+          _id: lesson._id || `lesson_${Date.now()}_${lessonIndex}`,
+          title: lesson.title || "",
+          description: lesson.description || "",
+          type: lesson.type || "video",
+          videoUrl: lesson.videoUrl || "",
+          duration: lesson.duration ? Math.floor(lesson.duration / 60) : 0,
+          order: lesson.order || lessonIndex + 1,
+          isPreview: lesson.isPreview || false,
+          status: lesson.status || "unlocked",
+          content: lesson.content || { instructions: "", resources: [] },
+        };
+
+        // Only add quizId to the object if it exists
+        if (lesson.type === 'quiz' && quizData) {
+          lessonObj.quizId = quizData;
+        }
+
+        return lessonObj;
+      }) || [],
+    })) || [];
+
+    // Calculate totals
+    const totalDuration = transformedModules.reduce((total, module) => {
+      return total + (module.lessons?.reduce((sum, lesson) => sum + (lesson.duration || 0), 0) || 0);
+    }, 0);
+
+    const totalLessons = transformedModules.reduce((sum, module) =>
+      sum + (module.lessons?.length || 0), 0
+    );
+
+    const totalQuizzes = transformedModules.reduce((sum, module) =>
+      sum + (module.lessons?.filter(lesson => lesson.type === 'quiz')?.length || 0), 0
+    );
+
+    const totalProjects = transformedModules.reduce((sum, module) =>
+      sum + (module.lessons?.filter(lesson =>
+        lesson.type === 'project' || lesson.type === 'practice')?.length || 0), 0
+    );
+
+    // Format enrollment deadline
+    let formattedEnrollmentDeadline = "";
+    if (course.enrollmentDeadline) {
+      const date = new Date(course.enrollmentDeadline);
+      if (!isNaN(date.getTime())) {
+        formattedEnrollmentDeadline = date.toISOString().split('T')[0];
       }
-      setBannerFile(file);
-      setBannerPreview(URL.createObjectURL(file));
+    }
+
+    // Format thumbnails
+    let thumbnailUrls = [];
+    if (course.thumbnails && Array.isArray(course.thumbnails)) {
+      thumbnailUrls = course.thumbnails.map(thumb => {
+        if (typeof thumb === 'object' && thumb.data) {
+          return thumb.data;
+        }
+        return thumb;
+      }).filter(Boolean);
+    }
+
+    setCourseData({
+      // Basic Info
+      title: course.title || "",
+      shortDescription: course.shortDescription || "",
+      longDescription: course.longDescription || "",
+      category: category,
+      price: course.price?.toString() || "",
+      promotionalPrice: course.promotionalPrice?.toString() || "",
+      level: course.level || "Beginner",
+      enrollmentDeadline: formattedEnrollmentDeadline,
+      published: course.published || false,
+      language: course.language || "English",
+      accessType: course.accessType || "lifetime",
+      certificateIncluded: course.certificateIncluded || false,
+
+      // Instructor
+      instructor: instructor,
+
+      // Content
+      modules: transformedModules,
+
+      // Metadata
+      tags: course.tags || [],
+      whatYoullLearn: course.whatYoullLearn || [],
+      prerequisites: course.prerequisites || [],
+      subtitles: course.subtitles || [],
+
+      // Media
+      bannerImage: null,
+      bannerUrl: course.bannerUrl || (course.bannerImage?.data || ""),
+      thumbnails: [],
+      thumbnailUrls: thumbnailUrls,
+
+      // Calculated fields
+      totalDuration,
+      totalLessons,
+      totalQuizzes,
+      totalProjects,
+    });
+  };
+
+  const updateCourseData = (field, value) => {
+    console.log("Updating course data field:", field, "value:", value);
+    setCourseData(prev => {
+      const updated = { ...prev, [field]: value };
+
+      // Update dependent calculated fields for content tab
+      if (field === 'modules') {
+        const totalDuration = value.reduce((total, module) => {
+          return total + (module.lessons?.reduce((sum, lesson) => sum + (lesson.duration || 0), 0) || 0);
+        }, 0);
+
+        const totalLessons = value.reduce((sum, module) =>
+          sum + (module.lessons?.length || 0), 0
+        );
+
+        const totalQuizzes = value.reduce((sum, module) =>
+          sum + (module.lessons?.filter(lesson => lesson.type === 'quiz')?.length || 0), 0
+        );
+
+        const totalProjects = value.reduce((sum, module) =>
+          sum + (module.lessons?.filter(lesson =>
+            lesson.type === 'project' || lesson.type === 'practice')?.length || 0), 0
+        );
+
+        return {
+          ...updated,
+          totalDuration,
+          totalLessons,
+          totalQuizzes,
+          totalProjects
+        };
+      }
+
+      return updated;
+    });
+
+    // Clear error for this field
+    if (errors && errors[field] && setErrors) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
-  const handleThumbnailsChange = (e) => {
-    const files = Array.from(e.target.files);
+  const prepareUpdateData = () => {
+    const updateData = {};
 
-    // Limit to 4 files
-    if (files.length > 4) {
-      toast.error("Maximum 4 thumbnails allowed");
-      return;
+    // Basic Info
+    if (courseData.title) updateData.title = courseData.title;
+    if (courseData.shortDescription) updateData.shortDescription = courseData.shortDescription;
+    if (courseData.longDescription) updateData.longDescription = courseData.longDescription;
+    if (courseData.category?.value) updateData.category = courseData.category.value;
+
+    // Convert price to number safely
+    if (courseData.price !== undefined) {
+      updateData.price = parseFloat(courseData.price) || 0;
     }
 
-    // Check file sizes
-    const oversized = files.find((f) => f.size > 5 * 1024 * 1024);
-    if (oversized) {
-      toast.error("Thumbnail image too large (max 5MB each)");
-      return;
+    if (courseData.promotionalPrice !== undefined && courseData.promotionalPrice !== '') {
+      updateData.promotionalPrice = parseFloat(courseData.promotionalPrice);
     }
 
-    setThumbnailFiles(prev => [...prev, ...files]);
-    setThumbnailPreviews(prev => [
-      ...prev,
-      ...files.map((file) => URL.createObjectURL(file))
-    ]);
-  };
+    if (courseData.level) updateData.level = courseData.level;
 
-  // Remove thumbnail
-  const removeThumbnail = (index, isExisting = false) => {
-    if (isExisting) {
-      setExistingThumbnails(prev => prev.filter((_, i) => i !== index));
-    } else {
-      setThumbnailFiles(prev => prev.filter((_, i) => i !== index));
-      setThumbnailPreviews(prev => prev.filter((_, i) => i !== index));
+    // Handle enrollment deadline
+    if (courseData.enrollmentDeadline) {
+      if (courseData.enrollmentDeadline.includes('T')) {
+        updateData.enrollmentDeadline = courseData.enrollmentDeadline;
+      } else {
+        updateData.enrollmentDeadline = new Date(courseData.enrollmentDeadline).toISOString();
+      }
     }
+
+    if (courseData.published !== undefined) updateData.published = courseData.published;
+    if (courseData.language) updateData.language = courseData.language;
+    if (courseData.accessType) updateData.accessType = courseData.accessType;
+    if (courseData.certificateIncluded !== undefined) updateData.certificateIncluded = courseData.certificateIncluded;
+
+    // Instructor
+    if (userRole === "instructor" && userId) {
+      updateData.instructor = userId;
+    } else if (userRole === "admin" && courseData.instructor?.value) {
+      updateData.instructor = courseData.instructor.value;
+    }
+
+    // Metadata
+    updateData.tags = courseData.tags || [];
+    updateData.whatYoullLearn = courseData.whatYoullLearn || [];
+    updateData.prerequisites = courseData.prerequisites || [];
+    updateData.subtitles = courseData.subtitles || [];
+
+    // Media - Process images only if they exist
+    if (courseData.bannerImage && typeof courseData.bannerImage === 'string' && courseData.bannerImage.startsWith('data:image')) {
+      try {
+        const contentType = courseData.bannerImage.split(';')[0].split(':')[1];
+        const base64Data = courseData.bannerImage.split(',')[1];
+        const sizeInBytes = (base64Data.length * 3) / 4;
+
+        updateData.bannerImage = {
+          data: courseData.bannerImage,
+          contentType: contentType,
+          size: sizeInBytes
+        };
+      } catch (error) {
+        console.error("Error processing banner image:", error);
+      }
+    }
+
+    // Process thumbnails
+    if (courseData.thumbnails && courseData.thumbnails.length > 0) {
+      updateData.thumbnails = courseData.thumbnails
+        .filter(thumb => thumb && typeof thumb === 'string' && thumb.startsWith('data:image'))
+        .map((thumb, index) => {
+          try {
+            const contentType = thumb.split(';')[0].split(':')[1];
+            const base64Data = thumb.split(',')[1];
+            const sizeInBytes = (base64Data.length * 3) / 4;
+
+            return {
+              data: thumb,
+              contentType: contentType,
+              size: sizeInBytes,
+              order: index
+            };
+          } catch (error) {
+            console.error("Error processing thumbnail:", error);
+            return null;
+          }
+        })
+        .filter(thumb => thumb !== null);
+    }
+
+    // Content - Modules and Lessons (FIXED: Only include quizId for quiz lessons)
+    if (courseData.modules && courseData.modules.length > 0) {
+      updateData.modules = courseData.modules.map((module, moduleIndex) => {
+        const processedModule = {
+          title: module.title || "",
+          description: module.description || "",
+          order: module.order || moduleIndex + 1,
+          status: module.status || "unlocked",
+          lessons: []
+        };
+
+        // Process lessons
+        if (module.lessons && module.lessons.length > 0) {
+          processedModule.lessons = module.lessons.map((lesson, lessonIndex) => {
+            // Create lesson object with common fields
+            const processedLesson = {
+              title: lesson.title || "",
+              description: lesson.description || "",
+              type: lesson.type || "video",
+              duration: (Number(lesson.duration) || 0) * 60, // Convert minutes to seconds
+              order: lesson.order || lessonIndex + 1,
+              isPreview: lesson.isPreview || false,
+              status: lesson.status || "unlocked"
+            };
+
+            // Add video URL if type is video
+            if (lesson.type === 'video' && lesson.videoUrl) {
+              processedLesson.videoUrl = lesson.videoUrl;
+            }
+
+            // CRITICAL FIX: Only add quizId for quiz lessons
+            if (lesson.type === 'quiz') {
+              // Get the quizId value
+              const quizIdValue = lesson.quizId?.value || lesson.quizId;
+
+              // Validate it's a proper MongoDB ObjectId (24 hex chars)
+              if (quizIdValue && quizIdValue.trim() !== '' &&
+                quizIdValue.length === 24 && /^[0-9a-fA-F]{24}$/.test(quizIdValue)) {
+                processedLesson.quizId = quizIdValue;
+              } else {
+                console.warn(`Invalid quizId for quiz lesson: "${lesson.title}"`, quizIdValue);
+                // Still include it even if invalid, but it will fail validation
+                processedLesson.quizId = quizIdValue;
+              }
+            }
+            // DO NOT ADD quizId FOR NON-QUIZ LESSONS
+
+            // Add content for practice/project types
+            if ((lesson.type === 'practice' || lesson.type === 'project') && lesson.content) {
+              processedLesson.content = {
+                instructions: lesson.content.instructions || ""
+              };
+            }
+
+            // Preserve existing _id if it's a real MongoDB ID
+            if (lesson._id && !lesson._id.startsWith('lesson_temp_')) {
+              processedLesson._id = lesson._id;
+            }
+
+            return processedLesson;
+          });
+        }
+
+        // Preserve existing _id if it's a real MongoDB ID
+        if (module._id && !module._id.startsWith('module_temp_')) {
+          processedModule._id = module._id;
+        }
+
+        return processedModule;
+      });
+    }
+
+    // Debug logging
+    console.log("=== DEBUG: Prepared Update Data ===");
+    console.log("Course Title:", updateData.title);
+
+    if (updateData.modules) {
+      console.log("Modules count:", updateData.modules.length);
+      updateData.modules.forEach((module, moduleIndex) => {
+        console.log(`\nModule ${moduleIndex}: "${module.title}"`);
+        if (module.lessons) {
+          module.lessons.forEach((lesson, lessonIndex) => {
+            const hasQuizId = lesson.quizId !== undefined;
+            console.log(`  Lesson ${lessonIndex}: "${lesson.title}" (${lesson.type}) - quizId: ${hasQuizId ? `PRESENT: ${lesson.quizId}` : 'ABSENT'}`);
+          });
+        }
+      });
+    }
+
+    console.log("=== END DEBUG ===");
+
+    return updateData;
   };
 
-  // Remove banner
-  const removeBanner = () => {
-    setBannerFile(null);
-    setBannerPreview("");
-    setExistingBanner("");
-  };
-
-  // Handle form submit
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleUpdate = async () => {
     setUpdating(true);
-
+    setErrors({});
     const stored = localStorage.getItem("authUser");
+
     if (!stored) {
-      toast.error("You are not logged in.");
+      toast.error("You are not logged in");
       setUpdating(false);
       navigate("/login");
       return;
@@ -324,647 +571,351 @@ const EditCourse = () => {
       const token = authData?.token;
       const user = authData?.user;
 
-      if (!token || !user) {
-        toast.error("Invalid session data.");
+      // Only validate fields based on active tab
+      const validationErrors = {};
+
+      if (activeTab === "basic") {
+        if (!courseData.title?.trim()) validationErrors.title = "Course title is required";
+        if (!courseData.shortDescription?.trim()) validationErrors.shortDescription = "Short description is required";
+        if (!courseData.category) validationErrors.category = "Category is required";
+      }
+
+      if (activeTab === "instructor" && userRole === "admin" && !courseData.instructor) {
+        validationErrors.instructor = "Instructor is required";
+      }
+
+      if (activeTab === "content") {
+        if (courseData.modules.length === 0) {
+          validationErrors.modules = "At least one module is required";
+        } else {
+          const hasInvalidModule = courseData.modules.some(module => !module.title?.trim());
+          const hasInvalidLesson = courseData.modules.some(module =>
+            module.lessons.some(lesson => !lesson.title?.trim())
+          );
+
+          if (hasInvalidModule) validationErrors.modules = "All modules must have a title";
+          if (hasInvalidLesson) validationErrors.lessons = "All lessons must have a title";
+        }
+      }
+
+      if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors);
+        toast.error("Please fix the errors in the current tab");
         setUpdating(false);
-        navigate("/login");
         return;
       }
 
-      const role = user?.role;
-      const currentUserId = user?.id || user?._id;
+      const updateData = prepareUpdateData();
 
-      // Validation
-      if (!form.category) {
-        toast.error("Category is required.");
-        setUpdating(false);
-        return;
-      }
-
-      if (!form.title.trim()) {
-        toast.error("Course title is required.");
-        setUpdating(false);
-        return;
-      }
-
-      if (role === "admin" && !form.instructor) {
-        toast.error("Instructor is required for admin.");
-        setUpdating(false);
-        return;
-      }
-
-      // Create FormData
-      const formData = new FormData();
-
-      // Add form fields
-      formData.append("title", form.title);
-      formData.append("shortDescription", form.shortDescription);
-      formData.append("longDescription", form.longDescription);
-
-      // Handle instructor
-      let instructorId = null;
-      if (role === "instructor") {
-        instructorId = currentUserId;
-      } else if (role === "admin" && form.instructor) {
-        instructorId = form.instructor.value;
-      }
-
-      if (instructorId) {
-        console.log("Instructor ID being sent:", instructorId);
-        formData.append("instructor", instructorId);
-      }
-
-      formData.append("price", Number(form.price) || 0);
-      formData.append("category", form.category.value);
-      formData.append("level", form.level);
-      
-      if (form.enrollmentDeadline) {
-        formData.append("enrollmentDeadline", form.enrollmentDeadline);
-      }
-      
-      formData.append("published", form.published);
-
-      // Add banner image if exists
-      if (bannerFile) {
-        formData.append("banner", bannerFile);
-      }
-
-      // Add thumbnail images
-      thumbnailFiles.forEach((file) => {
-        formData.append("thumbnails", file);
-      });
-
-      // Add existing thumbnails that haven't been removed
-      existingThumbnails.forEach((url, index) => {
-        formData.append("existingThumbnails[]", url);
-      });
-
-      // Add existing banner if not removed
-      if (existingBanner && !bannerFile) {
-        formData.append("existingBanner", existingBanner);
-      }
-
-      // Add modules as JSON
-      formData.append("modules", JSON.stringify(modules));
-
-      // Log FormData for debugging
-      console.log("=== FormData Contents for PUT ===");
-      for (let [key, value] of formData.entries()) {
-        console.log(key, ":", value);
-      }
+      console.log("Sending update data to server:", updateData);
 
       const res = await axios.put(
         `https://shekhai-server.onrender.com/api/v1/courses/${courseId}`,
-        formData,
+        updateData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
+            "Content-Type": "application/json",
           },
         }
       );
 
-      console.log("Update API Response:", res.data);
+      console.log("Server response:", res.data);
 
       if (res.data.success) {
-        toast.success("Course updated successfully!");
-        setTimeout(() => navigate("/all-courses"), 1500);
+        toast.success(`Course ${activeTab} updated successfully!`);
+        if (!completedSteps.includes(activeTab)) {
+          setCompletedSteps([...completedSteps, activeTab]);
+        }
       } else {
         toast.error(res.data.msg || "Failed to update course");
       }
-    } catch (err) {
-      console.error("Update error:", err);
+    } catch (error) {
+      console.error("❌ Update error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        headers: error.response?.headers,
+        request: error.request
+      });
 
-      if (err.response) {
-        console.error("Response error:", err.response.data);
-        toast.error(
-          err.response.data?.msg || err.response.data?.message || "Server error"
-        );
-      } else if (err.request) {
-        toast.error("No response from server. Check your connection.");
+      const errorMsg = error.response?.data?.msg ||
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Error updating course";
+
+      // Show more detailed error message
+      if (error.response?.data?.errors) {
+        const errorDetails = Object.values(error.response.data.errors).join(', ');
+        toast.error(`${errorMsg}: ${errorDetails}`);
       } else {
-        toast.error("Request error: " + err.message);
+        toast.error(errorMsg);
       }
 
-      if (err.response?.status === 401) {
-        localStorage.removeItem("authUser");
-        navigate("/login");
+      // Set field-specific errors if available
+      if (error.response?.data?.errors) {
+        setErrors(error.response.data.errors);
       }
     } finally {
       setUpdating(false);
     }
   };
 
+  const isStepValid = (step) => {
+    switch (step) {
+      case "basic":
+        return courseData.title?.trim() &&
+          courseData.shortDescription?.trim() &&
+          courseData.category;
+      case "instructor":
+        return userRole === "instructor" || courseData.instructor;
+      case "content":
+        if (courseData.modules.length === 0) return false;
+        return courseData.modules.every(module =>
+          module.title?.trim() &&
+          module.lessons.length > 0 &&
+          module.lessons.every(lesson =>
+            lesson.title?.trim() &&
+            (lesson.type !== "quiz" || lesson.quizId) // Check if quiz lessons have quizId
+          )
+        );
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    if (!isStepValid(activeTab)) {
+      toast.error("Please complete all required fields in this tab");
+      return;
+    }
+
+    setCompletedSteps([...new Set([...completedSteps, activeTab])]);
+    const steps = ["basic", "instructor", "content", "metadata", "media"];
+    const currentIndex = steps.indexOf(activeTab);
+
+    if (currentIndex < steps.length - 1) {
+      setActiveTab(steps[currentIndex + 1]);
+    } else {
+      handleUpdate();
+    }
+  };
+
+  const handlePrevious = () => {
+    const steps = ["basic", "instructor", "content", "metadata", "media"];
+    const currentIndex = steps.indexOf(activeTab);
+    if (currentIndex > 0) {
+      setActiveTab(steps[currentIndex - 1]);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="container my-5">
+      <div className="container-fluid">
         <Breadcrumbs title="Edit Course" breadcrumbItem="Loading..." />
         <div className="text-center mt-5 py-5">
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Loading...</span>
           </div>
           <p className="mt-2">Loading course data...</p>
-          <p className="text-muted small">Course ID: {courseId}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container my-5">
-      <Breadcrumbs title="Courses" breadcrumbItem="Edit Course" />
+    <div className="page-content">
+      <div className="container-fluid">
+        <Breadcrumbs title="Edit Course" breadcrumbItem={courseData.title} />
 
-      {/* Debug Info - Remove in production */}
-      <div className="alert alert-info mb-3">
-        <div className="d-flex justify-content-between align-items-center">
-          <div>
-            <strong>Debug Info:</strong>
-            <span className="ms-2 badge bg-primary">Course ID: {courseId}</span>
-            <span className="ms-2 badge bg-secondary">User Role: {userRole}</span>
-            <span className="ms-2 badge bg-success">User ID: {userId?.substring(0, 8)}...</span>
-          </div>
-          <button 
-            className="btn btn-sm btn-outline-info"
-            onClick={() => window.location.reload()}
-          >
-            Reload
-          </button>
-        </div>
-      </div>
-
-      {/* User Role Indicator */}
-      <div className="mb-3">
-        <span
-          className={`badge ${
-            userRole === "admin"
-              ? "bg-danger"
-              : userRole === "instructor"
-              ? "bg-primary"
-              : "bg-secondary"
-          }`}
-        >
-          {userRole === "admin"
-            ? "Admin Mode"
-            : userRole === "instructor"
-            ? "Instructor Mode"
-            : "Loading..."}
-        </span>
-        {userRole === "instructor" && (
-          <span className="ms-2 text-muted">
-            (You can only edit your own courses)
-          </span>
-        )}
-      </div>
-
-      <div className="card shadow-sm rounded-4 p-4">
-        <form onSubmit={handleSubmit}>
-          {/* Banner Image */}
-          <div className="mb-4">
-            <label className="form-label fw-semibold">Banner Image</label>
-            
-            {/* Existing banner preview */}
-            {existingBanner && !bannerPreview && (
-              <div className="mb-3">
-                <p className="text-muted mb-1">Current Banner:</p>
-                <div className="position-relative" style={{ maxWidth: "300px" }}>
-                  <img
-                    src={existingBanner}
-                    alt="Current Banner"
-                    className="img-fluid rounded"
-                    style={{
-                      maxHeight: 150,
-                      objectFit: "cover",
-                      border: "1px solid #dee2e6",
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-danger position-absolute top-0 end-0"
-                    style={{ transform: "translate(30%, -30%)" }}
-                    onClick={removeBanner}
-                  >
-                    ×
-                  </button>
-                </div>
+        {/* Debug Info */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="alert alert-info mb-3">
+            <div className="d-flex justify-content-between">
+              <div>
+                <strong>Editing Course:</strong> {courseData.title}
+                <span className="ms-2 badge bg-primary">ID: {courseId}</span>
+                <span className="ms-2 badge bg-secondary">Role: {userRole}</span>
               </div>
-            )}
-
-            {/* New banner upload */}
-            <input
-              type="file"
-              accept="image/*"
-              className="form-control"
-              onChange={handleBannerChange}
-            />
-            <div className="form-text">
-              Recommended: 1200×400 pixels, max 5MB
-            </div>
-            
-            {/* New banner preview */}
-            {bannerPreview && (
-              <div className="mt-3">
-                <p className="text-muted mb-1">New Banner Preview:</p>
-                <div className="position-relative" style={{ maxWidth: "300px" }}>
-                  <img
-                    src={bannerPreview}
-                    alt="New Banner Preview"
-                    className="img-fluid rounded"
-                    style={{
-                      maxHeight: 150,
-                      objectFit: "cover",
-                      border: "1px solid #dee2e6",
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-danger position-absolute top-0 end-0"
-                    style={{ transform: "translate(30%, -30%)" }}
-                    onClick={() => {
-                      setBannerFile(null);
-                      setBannerPreview("");
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Thumbnails */}
-          <div className="mb-4">
-            <label className="form-label fw-semibold">
-              Thumbnail Images (Max 4)
-            </label>
-
-            {/* Existing thumbnails */}
-            {existingThumbnails.length > 0 && (
-              <div className="mb-3">
-                <p className="text-muted mb-1">Current Thumbnails:</p>
-                <div className="d-flex flex-wrap gap-3 mb-3">
-                  {existingThumbnails.map((url, idx) => (
-                    <div key={`existing-${idx}`} className="position-relative">
-                      <img
-                        src={url}
-                        alt={`Thumbnail ${idx + 1}`}
-                        className="img-thumbnail"
-                        style={{
-                          width: 120,
-                          height: 90,
-                          objectFit: "cover",
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-danger position-absolute top-0 end-0"
-                        style={{ transform: "translate(30%, -30%)" }}
-                        onClick={() => removeThumbnail(idx, true)}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* New thumbnails upload */}
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="form-control"
-              onChange={handleThumbnailsChange}
-            />
-            <div className="form-text">
-              Recommended: 400×300 pixels, max 5MB each
-            </div>
-            
-            {/* New thumbnails preview */}
-            {thumbnailPreviews.length > 0 && (
-              <div className="mt-3">
-                <p className="text-muted mb-1">New Thumbnails Preview:</p>
-                <div className="d-flex flex-wrap gap-3">
-                  {thumbnailPreviews.map((url, idx) => (
-                    <div key={`new-${idx}`} className="position-relative">
-                      <img
-                        src={url}
-                        alt={`New Thumbnail ${idx + 1}`}
-                        className="img-thumbnail"
-                        style={{
-                          width: 120,
-                          height: 90,
-                          objectFit: "cover",
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-danger position-absolute top-0 end-0"
-                        style={{ transform: "translate(30%, -30%)" }}
-                        onClick={() => removeThumbnail(idx, false)}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Title */}
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Course Title *</label>
-            <input
-              type="text"
-              className="form-control"
-              name="title"
-              value={form.title}
-              onChange={handleChange}
-              placeholder="Enter course title"
-              required
-            />
-          </div>
-
-          {/* Instructor Field */}
-          <div className="mb-3">
-            <label className="form-label fw-semibold">
-              Instructor {userRole === "admin" && "*"}
-            </label>
-
-            {userRole === "admin" ? (
-              <>
-                <Select
-                  value={form.instructor}
-                  onChange={(val) => handleSelectChange("instructor", val)}
-                  options={instructors}
-                  placeholder={
-                    instructors.length > 0
-                      ? "Select Instructor..."
-                      : "Loading instructors..."
-                  }
-                  isClearable
-                  isDisabled={instructors.length === 0}
-                />
-                {instructors.length === 0 ? (
-                  <div className="form-text text-warning">
-                    No instructors found.
-                  </div>
-                ) : (
-                  <div className="form-text">
-                    Admin must select an instructor
-                  </div>
-                )}
-              </>
-            ) : userRole === "instructor" ? (
-              <>
-                <div className="form-control bg-light">
-                  {form.instructor?.label || "You"}
-                </div>
-                <div className="form-text">
-                  You are the instructor of this course
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="form-control bg-light">
-                  Loading user role...
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Price */}
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Price ($)</label>
-            <div className="input-group">
-              <span className="input-group-text">$</span>
-              <input
-                type="number"
-                className="form-control"
-                name="price"
-                value={form.price}
-                onChange={handleChange}
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Category */}
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Category *</label>
-            <Select
-              value={form.category}
-              onChange={(val) => handleSelectChange("category", val)}
-              options={categories}
-              placeholder="Select Category..."
-              isClearable
-              required
-            />
-          </div>
-
-          {/* Level */}
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Level</label>
-            <select
-              className="form-select"
-              name="level"
-              value={form.level}
-              onChange={handleChange}
-            >
-              <option value="Beginner">Beginner</option>
-              <option value="Intermediate">Intermediate</option>
-              <option value="Advanced">Advanced</option>
-            </select>
-          </div>
-
-          {/* Enrollment Deadline */}
-          <div className="mb-3">
-            <label className="form-label fw-semibold">
-              Enrollment Deadline
-            </label>
-            <input
-              type="date"
-              className="form-control"
-              name="enrollmentDeadline"
-              value={form.enrollmentDeadline}
-              onChange={handleChange}
-              min={new Date().toISOString().split("T")[0]}
-            />
-          </div>
-
-          {/* Modules */}
-          <div className="mb-4">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <label className="form-label fw-semibold mb-0">Modules</label>
               <button
-                type="button"
-                className="btn btn-success btn-sm"
-                onClick={addModule}
+                className="btn btn-sm btn-outline-info"
+                onClick={() => {
+                  console.log("Course Data:", courseData);
+                  console.log("Quizzes:", quizzes);
+                  console.log("Active Tab:", activeTab);
+                }}
               >
-                + Add Module
+                Log Data
               </button>
             </div>
+          </div>
+        )}
 
-            {modules.map((mod, index) => (
-              <div key={mod._id || index} className="card mb-3 border">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h6 className="mb-0">Module {index + 1}</h6>
-                    {modules.length > 1 && (
+        <div className="row">
+          {/* Sidebar Stepper */}
+          <div className="col-lg-3 col-xl-2 d-none d-lg-block">
+            <EditCourseStepper
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              completedSteps={completedSteps}
+              courseTitle={courseData.title}
+            />
+          </div>
+
+          {/* Main Content */}
+          <div className="col-lg-9 col-xl-10">
+            <div className="card shadow-lg rounded-4">
+              <div className="card-body p-4">
+                {/* Mobile Stepper */}
+                <div className="d-block d-lg-none mb-4">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <h5 className="mb-0">Edit Course</h5>
+                    <select
+                      className="form-select w-auto"
+                      value={activeTab}
+                      onChange={(e) => setActiveTab(e.target.value)}
+                    >
+                      <option value="basic">Basic Info</option>
+                      <option value="instructor">Instructor</option>
+                      <option value="content">Content</option>
+                      <option value="metadata">Metadata</option>
+                      <option value="media">Media</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Active Tab Content */}
+                {activeTab === "basic" && (
+                  <EditBasicInfoTab
+                    courseData={courseData}
+                    updateCourseData={updateCourseData}
+                    errors={errors}
+                    setErrors={setErrors}
+                    categories={categories}
+                    isSubmitting={updating}
+                  />
+                )}
+
+                {activeTab === "instructor" && (
+                  <EditInstructorTab
+                    courseData={courseData}
+                    updateCourseData={updateCourseData}
+                    errors={errors}
+                    setErrors={setErrors}
+                    instructors={instructors}
+                    userRole={userRole}
+                    userId={userId}
+                    isSubmitting={updating}
+                  />
+                )}
+
+                {activeTab === "content" && (
+                  <EditContentTab
+                    courseData={courseData}
+                    updateCourseData={updateCourseData}
+                    errors={errors}
+                    setErrors={setErrors}
+                    quizzes={quizzes}
+                    isSubmitting={updating}
+                  />
+                )}
+
+                {activeTab === "metadata" && (
+                  <EditMetadataTab
+                    courseData={courseData}
+                    updateCourseData={updateCourseData}
+                    errors={errors}
+                    setErrors={setErrors}
+                    isSubmitting={updating}
+                  />
+                )}
+
+                {activeTab === "media" && (
+                  <EditMediaTab
+                    courseData={courseData}
+                    updateCourseData={updateCourseData}
+                    errors={errors}
+                    setErrors={setErrors}
+                    isSubmitting={updating}
+                  />
+                )}
+
+                {/* Navigation Buttons */}
+                <div className="d-flex justify-content-between mt-5 pt-4 border-top">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={() => navigate("/all-courses")}
+                    disabled={updating}
+                  >
+                    Cancel
+                  </button>
+
+                  <div className="d-flex gap-3">
+                    {activeTab !== "basic" && (
                       <button
                         type="button"
-                        className="btn btn-outline-danger btn-sm"
-                        onClick={() => removeModule(index)}
+                        className="btn btn-outline-primary"
+                        onClick={handlePrevious}
+                        disabled={updating}
                       >
-                        Remove
+                        Previous
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      className="btn btn-primary px-4"
+                      onClick={handleUpdate}
+                      disabled={updating}
+                    >
+                      {updating ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2"></span>
+                          Updating...
+                        </>
+                      ) : (
+                        "Update " + (activeTab.charAt(0).toUpperCase() + activeTab.slice(1))
+                      )}
+                    </button>
+
+                    {activeTab !== "media" && (
+                      <button
+                        type="button"
+                        className="btn btn-outline-success"
+                        onClick={handleNext}
+                        disabled={updating}
+                      >
+                        Next
                       </button>
                     )}
                   </div>
-
-                  <div className="row g-3">
-                    <div className="col-md-6">
-                      <label className="form-label">Title</label>
-                      <input
-                        type="text"
-                        placeholder="Module Title"
-                        value={mod.title}
-                        onChange={(e) =>
-                          handleModuleChange(index, "title", e.target.value)
-                        }
-                        className="form-control"
-                      />
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label">Duration (minutes)</label>
-                      <input
-                        type="number"
-                        placeholder="Duration"
-                        value={mod.duration}
-                        onChange={(e) =>
-                          handleModuleChange(index, "duration", e.target.value)
-                        }
-                        className="form-control"
-                        min="0"
-                      />
-                    </div>
-                    <div className="col-12">
-                      <label className="form-label">Description</label>
-                      <input
-                        type="text"
-                        placeholder="Module Description"
-                        value={mod.description}
-                        onChange={(e) =>
-                          handleModuleChange(
-                            index,
-                            "description",
-                            e.target.value
-                          )
-                        }
-                        className="form-control"
-                      />
-                    </div>
-                    <div className="col-12">
-                      <label className="form-label">Video URL</label>
-                      <input
-                        type="text"
-                        placeholder="https://example.com/video.mp4"
-                        value={mod.videoUrl}
-                        onChange={(e) =>
-                          handleModuleChange(index, "videoUrl", e.target.value)
-                        }
-                        className="form-control"
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
+        </div>
 
-          {/* Status */}
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Status</label>
-            <Select
-              value={statusOptions.find((s) => s.value === form.published)}
-              onChange={(val) => handleSelectChange("published", val.value)}
-              options={statusOptions}
-              isClearable={false}
-            />
-          </div>
-
-          {/* Short Description */}
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Short Description</label>
-            <textarea
-              className="form-control"
-              name="shortDescription"
-              value={form.shortDescription}
-              onChange={handleChange}
-              rows={3}
-              placeholder="Brief description (max 200 characters)"
-              maxLength={200}
-              required
-            />
-          </div>
-
-          {/* Long Description */}
-          <div className="mb-4">
-            <label className="form-label fw-semibold">Long Description</label>
-            <textarea
-              className="form-control"
-              name="longDescription"
-              value={form.longDescription}
-              onChange={handleChange}
-              rows={5}
-              placeholder="Detailed course description"
-              required
-            />
-          </div>
-
-          {/* Submit Button */}
-          <div className="d-flex gap-3 mt-4">
-            <button
-              className="btn btn-primary px-5"
-              type="submit"
-              disabled={updating}
-            >
-              {updating ? (
-                <>
-                  <span
-                    className="spinner-border spinner-border-sm me-2"
-                    role="status"
-                  ></span>
-                  Updating...
-                </>
-              ) : (
-                "Update Course"
-              )}
-            </button>
-            <button
-              type="button"
-              className="btn btn-outline-secondary"
-              onClick={() => navigate("/all-courses")}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            success: {
+              icon: '✅',
+              style: {
+                background: '#28a745',
+              },
+            },
+            error: {
+              icon: '❌',
+              style: {
+                background: '#dc3545',
+              },
+            },
+          }}
+        />
       </div>
-
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: "#363636",
-            color: "#fff",
-          },
-        }}
-      />
     </div>
   );
 };
