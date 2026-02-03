@@ -240,7 +240,7 @@ const SidebarContent = ({ t }) => {
                 </ul>
               </li>
               <li>
-                <Link to="/instructor/enrolled/students/live-session" onClick={collapseAll}>
+                <Link to="/all/live-sessions" onClick={collapseAll}>
                   <Video size={18} className="me-2" />
                   {t("Live Sessions")}
                 </Link>
@@ -376,6 +376,12 @@ const SidebarContent = ({ t }) => {
                 </Link>
               </li>
               <li>
+                <Link to="/all/live-sessions" onClick={collapseAll}>
+                  <Video size={18} className="me-2" />
+                  {t("Live Sessions")}
+                </Link>
+              </li>
+              <li>
                 <Link to="/#" className="has-arrow">
                   <DollarSign size={18} className="align-middle me-2" />
                   <span>{t("Finance")}</span>
@@ -395,6 +401,7 @@ const SidebarContent = ({ t }) => {
                   </li>
                 </ul>
               </li>
+
             </>
           )}
 

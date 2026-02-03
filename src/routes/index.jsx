@@ -87,6 +87,7 @@ import MentorRoomManagement from "../pages/MentorRoom/MentorRoomManagement";
 // ==============================
 import HomePageManagement from "../pages/HomePage/HomePageManagement";
 import Enrollments from "../pages/Enrollements/Enrollements";
+import CreateLiveSessionPage from "../pages/Instructor/AddLiveSession";
 
 // ======================================================================
 // 🔒 AUTH PROTECTED ROUTES
@@ -141,7 +142,8 @@ const authProtectedRoutes = [
   { path: "/instructor/announcements/create", component: <CreateAnnouncementForm /> },
   { path: "/instructor/enrolled/students", component: <StudentsPage /> },
   { path: "/instructor/enrolled/students/attendance", component: <AttendancePage /> },
-  { path: "/instructor/enrolled/students/live-session", component: <LiveSessionPage /> },
+  { path: "/all/live-sessions", component: <LiveSessionPage /> },
+  { path: "/live-sessions/create", component: <CreateLiveSessionPage /> },
 
   // Webinar & Mentor Room
   { path: "/webinar-management", component: <WebinarManagement /> },

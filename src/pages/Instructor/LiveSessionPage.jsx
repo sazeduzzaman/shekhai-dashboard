@@ -1,1126 +1,543 @@
-import React, { Component } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import Breadcrumbs from '../../components/Common/Breadcrumb';
+import { Edit, Eye, Play, StopCircle, Trash } from 'lucide-react';
+import { BoxArrowUpRight } from 'react-bootstrap-icons';
 
-class LiveSessionPage extends Component {
-  constructor(props) {
-    super(props);
+const LiveSessionPage = () => {
+  const [liveSessions, setLiveSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState({
+    status: '',
+    category: '',
+    type: '',
+    isPaid: ''
+  });
 
-    this.state = {
-      courses: [],
-      scheduledSessions: [],
-      upcomingSessions: [],
-      ongoingSessions: [],
-      pastSessions: [],
-      selectedCourse: "",
-      isLoading: true,
-      error: null,
-      showCreateModal: false,
-      showRecordingModal: false,
-      newSession: {
-        courseId: "",
-        title: "",
-        description: "",
-        date: "",
-        startTime: "",
-        endTime: "",
-        meetingPlatform: "zoom",
-        meetingLink: "",
-        maxParticipants: 30,
-        recordingEnabled: true,
-      },
-      selectedRecording: null,
-    };
-  }
+  // Auth info
+  const authUser = JSON.parse(localStorage.getItem('authUser'));
+  const token = authUser?.token;
+  const userRole = authUser?.user?.role;
 
-  componentDidMount() {
-    this.fetchCourses();
-    this.loadMockSessions(); // In real app, fetch sessions from API
-  }
-
-  fetchCourses = async () => {
+  // Fetch live sessions
+  const fetchLiveSessions = async () => {
     try {
-      this.setState({ isLoading: true, error: null });
-      const response = await fetch(
-        "https://shekhai-server.onrender.com/api/v1/courses"
-      );
+      setLoading(true);
+      const queryParams = new URLSearchParams();
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Add filters to query
+      if (filters.status) queryParams.append('status', filters.status);
+      if (filters.category) queryParams.append('category', filters.category);
+      if (filters.type) queryParams.append('type', filters.type);
+      if (filters.isPaid) queryParams.append('isPaid', filters.isPaid);
+      if (search) queryParams.append('search', search);
+
+      const queryString = queryParams.toString();
+      const url = `https://shekhai-server.onrender.com/api/v1/live-sessions${queryString ? `?${queryString}` : ''}`;
+
+      const res = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setLiveSessions(data.data || []);
+      } else {
+        toast.error(data.message || 'Failed to fetch live sessions');
+        setLiveSessions([]);
       }
-
-      const data = await response.json();
-
-      // Transform API data to match our format
-      const transformedCourses = data.map((course) => ({
-        id: course._id,
-        name: course.title,
-        code: course._id.substring(0, 8), // Use first 8 chars of ID as code
-        description: course.shortDescription || "No description available",
-        instructor: course.instructor?.name || "Instructor",
-        instructorId: course.instructor?._id,
-        price: course.price,
-        category: course.category?.[0]?.name || "Uncategorized",
-        level: course.level,
-        modules: course.modules || [],
-        totalModules: course.totalModules || 0,
-        totalDuration: course.totalDuration || 0,
-        bannerUrl: course.bannerUrl,
-        published: course.published,
-        purchasedBy: course.purchasedBy || [],
-        enrollmentDeadline: course.enrollmentDeadline,
-        color: this.getRandomColor(),
-        students: course.purchasedBy?.length || 0,
-      }));
-
-      this.setState({
-        courses: transformedCourses,
-        selectedCourse:
-          transformedCourses.length > 0 ? transformedCourses[0].id : "",
-      });
     } catch (error) {
-      console.error("Error fetching courses:", error);
-      this.setState({
-        error: "Failed to load courses. Please try again later.",
-        courses: this.getMockCourses(), // Fallback to mock data
-      });
+      console.error('Error fetching live sessions:', error);
+      toast.error('Error loading live sessions');
+      setLiveSessions([]);
     } finally {
-      this.setState({ isLoading: false });
+      setLoading(false);
     }
   };
 
-  loadMockSessions = () => {
-    // Mock session data - in real app, fetch from API
-    const mockSessions = [
-      {
-        id: 1,
-        courseId: this.state.courses.length > 0 ? this.state.courses[0].id : "",
-        title: "Introduction to Derivatives",
-        description: "Learn the basics of calculus derivatives",
-        date: "2026-01-20",
-        startTime: "10:00",
-        endTime: "11:30",
-        status: "scheduled",
-        meetingPlatform: "zoom",
-        meetingLink: "https://zoom.us/j/123456789",
-        participants: 25,
-        maxParticipants: 30,
-        recordingAvailable: false,
-        recordingUrl: "",
-      },
-      {
-        id: 2,
-        courseId: this.state.courses.length > 1 ? this.state.courses[1].id : "",
-        title: "Linked Lists Implementation",
-        description: "Practical implementation of linked lists",
-        date: "2026-01-20",
-        startTime: "14:00",
-        endTime: "15:30",
-        status: "live",
-        meetingPlatform: "google_meet",
-        meetingLink: "https://meet.google.com/abc-defg-hij",
-        participants: 18,
-        maxParticipants: 25,
-        recordingAvailable: false,
-        recordingUrl: "",
-      },
-      {
-        id: 3,
-        courseId: this.state.courses.length > 2 ? this.state.courses[2].id : "",
-        title: "Newton's Laws of Motion",
-        description: "Understanding classical mechanics",
-        date: "2026-01-19",
-        startTime: "13:00",
-        endTime: "14:30",
-        status: "completed",
-        meetingPlatform: "microsoft_teams",
-        meetingLink:
-          "https://teams.microsoft.com/l/meetup-join/19%3ameeting_123",
-        participants: 22,
-        maxParticipants: 30,
-        recordingAvailable: true,
-        recordingUrl: "https://example.com/recordings/physics-session",
-      },
-    ];
-
-    const now = new Date();
-    const upcoming = mockSessions.filter(
-      (s) =>
-        new Date(s.date + "T" + s.startTime) > now && s.status !== "completed"
-    );
-    const ongoing = mockSessions.filter((s) => s.status === "live");
-    const past = mockSessions.filter(
-      (s) =>
-        s.status === "completed" || new Date(s.date + "T" + s.endTime) < now
-    );
-
-    this.setState({
-      scheduledSessions: mockSessions,
-      upcomingSessions: upcoming,
-      ongoingSessions: ongoing,
-      pastSessions: past,
-    });
-  };
-
-  getRandomColor = () => {
-    const colors = [
-      "#4e73df",
-      "#1cc88a",
-      "#36b9cc",
-      "#f6c23e",
-      "#e74a3b",
-      "#6f42c1",
-      "#fd7e14",
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
-  };
-
-  handleInputChange = (e) => {
-    const { name, value } = e.target;
-    this.setState((prevState) => ({
-      newSession: {
-        ...prevState.newSession,
-        [name]: value,
-      },
-    }));
-  };
-
-  handleCreateSession = (e) => {
-    e.preventDefault();
-    const { newSession, scheduledSessions, courses } = this.state;
-
-    // Validate form
-    if (
-      !newSession.courseId ||
-      !newSession.title ||
-      !newSession.date ||
-      !newSession.startTime
-    ) {
-      alert("Please fill in all required fields");
+  // Delete live session
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this live session?')) {
       return;
     }
 
-    const course = courses.find((c) => c.id === newSession.courseId);
+    try {
+      const res = await fetch(`https://shekhai-server.onrender.com/api/v1/live-sessions/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-    // Create new session
-    const sessionId =
-      scheduledSessions.length > 0
-        ? Math.max(...scheduledSessions.map((s) => s.id)) + 1
-        : 1;
+      const data = await res.json();
 
-    const newSessionObj = {
-      id: sessionId,
-      courseId: newSession.courseId,
-      title: newSession.title,
-      description: newSession.description,
-      date: newSession.date,
-      startTime: newSession.startTime,
-      endTime: newSession.endTime || "23:59",
-      status: "scheduled",
-      meetingPlatform: newSession.meetingPlatform,
-      meetingLink:
-        newSession.meetingLink ||
-        this.generateMeetingLink(newSession.meetingPlatform),
-      participants: 0,
-      maxParticipants: newSession.maxParticipants,
-      recordingAvailable: newSession.recordingEnabled,
-      recordingUrl: "",
-    };
-
-    // Add to scheduled sessions
-    const updatedSessions = [...scheduledSessions, newSessionObj];
-
-    // Update state
-    this.setState({
-      scheduledSessions: updatedSessions,
-      showCreateModal: false,
-      newSession: {
-        courseId: "",
-        title: "",
-        description: "",
-        date: "",
-        startTime: "",
-        endTime: "",
-        meetingPlatform: "zoom",
-        meetingLink: "",
-        maxParticipants: 30,
-        recordingEnabled: true,
-      },
-      upcomingSessions: updatedSessions.filter(
-        (s) =>
-          new Date(s.date + "T" + s.startTime) > new Date() &&
-          s.status !== "completed"
-      ),
-    });
-
-    alert("✓ Live session scheduled successfully!");
-  };
-
-  generateMeetingLink = (platform) => {
-    const baseLinks = {
-      zoom: "https://zoom.us/j/",
-      google_meet: "https://meet.google.com/",
-      microsoft_teams: "https://teams.microsoft.com/l/meeting/",
-      custom: "https://meet.example.com/",
-    };
-
-    const randomId = Math.random().toString(36).substring(7);
-    return `${baseLinks[platform]}${randomId}`;
-  };
-
-  startSession = (sessionId) => {
-    const updatedSessions = this.state.scheduledSessions.map((session) => {
-      if (session.id === sessionId) {
-        return { ...session, status: "live" };
+      if (data.success) {
+        toast.success('Live session deleted successfully');
+        // Refresh the list
+        fetchLiveSessions();
+      } else {
+        toast.error(data.message || 'Failed to delete live session');
       }
-      return session;
-    });
-
-    this.setState({
-      scheduledSessions: updatedSessions,
-      ongoingSessions: updatedSessions.filter((s) => s.status === "live"),
-      upcomingSessions: updatedSessions.filter(
-        (s) =>
-          new Date(s.date + "T" + s.startTime) > new Date() &&
-          s.status !== "completed"
-      ),
-    });
-
-    alert("🎥 Session started! Share the meeting link with students.");
+    } catch (error) {
+      console.error('Error deleting live session:', error);
+      toast.error('Error deleting live session');
+    }
   };
 
-  endSession = (sessionId) => {
-    const updatedSessions = this.state.scheduledSessions.map((session) => {
-      if (session.id === sessionId) {
-        return {
-          ...session,
-          status: "completed",
-          recordingUrl: session.recordingAvailable
-            ? "https://example.com/recordings/" + sessionId
-            : "",
-        };
+  // Start live session
+  const handleStartSession = async (id) => {
+    try {
+      const res = await fetch(`https://shekhai-server.onrender.com/api/v1/live-sessions/${id}/start`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success('Live session started successfully');
+        fetchLiveSessions();
+      } else {
+        toast.error(data.message || 'Failed to start live session');
       }
-      return session;
+    } catch (error) {
+      console.error('Error starting live session:', error);
+      toast.error('Error starting live session');
+    }
+  };
+
+  // End live session
+  const handleEndSession = async (id) => {
+    try {
+      const res = await fetch(`https://shekhai-server.onrender.com/api/v1/live-sessions/${id}/end`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success('Live session ended successfully');
+        fetchLiveSessions();
+      } else {
+        toast.error(data.message || 'Failed to end live session');
+      }
+    } catch (error) {
+      console.error('Error ending live session:', error);
+      toast.error('Error ending live session');
+    }
+  };
+
+  // Initialize
+  useEffect(() => {
+    fetchLiveSessions();
+  }, [filters, search]);
+
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
-
-    this.setState({
-      scheduledSessions: updatedSessions,
-      ongoingSessions: updatedSessions.filter((s) => s.status === "live"),
-      pastSessions: updatedSessions.filter(
-        (s) =>
-          s.status === "completed" ||
-          new Date(s.date + "T" + s.endTime) < new Date()
-      ),
-    });
-
-    alert("✓ Session ended. Recording will be available soon.");
   };
 
-  joinSession = (meetingLink) => {
-    window.open(meetingLink, "_blank");
-  };
-
-  getPlatformIcon = (platform) => {
-    const icons = {
-      zoom: "bi-camera-video",
-      google_meet: "bi-google",
-      microsoft_teams: "bi-microsoft",
-      custom: "bi-link",
-    };
-    return icons[platform] || "bi-camera-video";
-  };
-
-  getPlatformName = (platform) => {
-    const names = {
-      zoom: "Zoom",
-      google_meet: "Google Meet",
-      microsoft_teams: "Microsoft Teams",
-      custom: "Custom",
-    };
-    return names[platform] || "Video Platform";
-  };
-
-  getStatusBadge = (status) => {
+  // Get status badge color
+  const getStatusBadge = (status) => {
     switch (status) {
-      case "scheduled":
-        return <span className="badge bg-info">Scheduled</span>;
-      case "live":
-        return <span className="badge bg-success">Live Now</span>;
-      case "completed":
-        return <span className="badge bg-secondary">Completed</span>;
-      case "cancelled":
-        return <span className="badge bg-danger">Cancelled</span>;
+      case 'live':
+        return 'badge bg-success';
+      case 'upcoming':
+        return 'badge bg-primary';
+      case 'completed':
+        return 'badge bg-secondary';
+      case 'draft':
+        return 'badge bg-warning';
+      case 'cancelled':
+        return 'badge bg-danger';
       default:
-        return <span className="badge bg-light text-dark">{status}</span>;
+        return 'badge bg-light text-dark';
     }
   };
 
-  formatDateTime = (date, time) => {
-    const dateObj = new Date(date + "T" + time);
-    return dateObj.toLocaleString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  render() {
-    const {
-      courses,
-      upcomingSessions,
-      ongoingSessions,
-      pastSessions,
-      isLoading,
-      error,
-      showCreateModal,
-      showRecordingModal,
-      newSession,
-      selectedRecording,
-    } = this.state;
-
-    if (isLoading) {
-      return (
-        <div className="container my-5 text-center py-5">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <p className="mt-3">Loading courses...</p>
-        </div>
-      );
+  // Filtered data
+  const filteredData = liveSessions.filter(session => {
+    if (search) {
+      return session.title.toLowerCase().includes(search.toLowerCase()) ||
+        session.description.toLowerCase().includes(search.toLowerCase());
     }
+    return true;
+  });
 
-    if (error) {
-      return (
-        <div className="container my-5">
-          <div className="alert alert-danger">
-            <i className="bi bi-exclamation-triangle me-2"></i>
-            {error}
-          </div>
-        </div>
-      );
-    }
+  return (
+    <div className="page-content">
+      <div className="container-fluid">
+        <Breadcrumbs title="Live Sessions" breadcrumbItem="All Live Sessions" />
 
-    return (
-      <div className="page-content">
-        <div className="container-fluid">
-          {/* Page Header */}
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <div>
-              <h1 className="h2">Live Sessions</h1>
-              <p className="text-muted">
-                Schedule and conduct live virtual classes
-              </p>
-            </div>
-            <div>
-              <button
-                className="btn btn-primary"
-                onClick={() => this.setState({ showCreateModal: true })}
-              >
-                <i className="bi bi-plus-circle me-2"></i>
-                Schedule Session
-              </button>
-            </div>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="row mb-4">
-            <div className="col-md-3 mb-3">
-              <div className="card h-100">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <h6 className="text-muted">Total Courses</h6>
-                      <h3 className="mb-0">{courses.length}</h3>
-                      <small className="text-muted">
-                        Available for sessions
-                      </small>
-                    </div>
-                    <div className="bg-primary rounded-circle p-3">
-                      <i className="bi bi-journals text-white fs-4"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-md-3 mb-3">
-              <div className="card h-100">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <h6 className="text-muted">Upcoming</h6>
-                      <h3 className="mb-0">{upcomingSessions.length}</h3>
-                      <small className="text-muted">Scheduled sessions</small>
-                    </div>
-                    <div className="bg-warning rounded-circle p-3">
-                      <i className="bi bi-calendar-check text-white fs-4"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-md-3 mb-3">
-              <div className="card h-100">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <h6 className="text-muted">Live Now</h6>
-                      <h3 className="mb-0">{ongoingSessions.length}</h3>
-                      <small className="text-muted">Active sessions</small>
-                    </div>
-                    <div className="bg-success rounded-circle p-3">
-                      <i className="bi bi-camera-video text-white fs-4"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-md-3 mb-3">
-              <div className="card h-100">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <h6 className="text-muted">Completed</h6>
-                      <h3 className="mb-0">{pastSessions.length}</h3>
-                      <small className="text-muted">Past sessions</small>
-                    </div>
-                    <div className="bg-secondary rounded-circle p-3">
-                      <i className="bi bi-check-circle text-white fs-4"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Ongoing Sessions */}
-          {ongoingSessions.length > 0 && (
-            <div className="card mb-4 border-success">
-              <div className="card-header bg-success text-white">
-                <h5 className="mb-0">
-                  <i className="bi bi-camera-video me-2"></i>
-                  Live Now
-                </h5>
-              </div>
+        {/* Stats Cards */}
+        <div className="row mb-4">
+          <div className="col-md-3">
+            <div className="card">
               <div className="card-body">
-                <div className="row">
-                  {ongoingSessions.map((session) => {
-                    const course =
-                      courses.find((c) => c.id === session.courseId) || {};
-                    return (
-                      <div className="col-md-6 mb-3" key={session.id}>
-                        <div className="card h-100 border-success">
-                          <div className="card-body">
-                            <div className="d-flex justify-content-between align-items-start mb-3">
-                              <div>
-                                <h5 className="card-title">{session.title}</h5>
-                                <div className="d-flex align-items-center mb-2">
-                                  <span className="badge bg-success me-2">
-                                    Live Now
-                                  </span>
-                                  <span className="badge bg-light text-dark">
-                                    <i
-                                      className={`bi ${this.getPlatformIcon(
-                                        session.meetingPlatform
-                                      )} me-1`}
-                                    ></i>
-                                    {this.getPlatformName(
-                                      session.meetingPlatform
-                                    )}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="dropdown">
-                                <button
-                                  className="btn btn-sm btn-outline-secondary border-0"
-                                  data-bs-toggle="dropdown"
-                                >
-                                  <i className="bi bi-three-dots-vertical"></i>
-                                </button>
-                                <ul className="dropdown-menu">
-                                  <li>
-                                    <button
-                                      className="dropdown-item"
-                                      onClick={() =>
-                                        this.joinSession(session.meetingLink)
-                                      }
-                                    >
-                                      <i className="bi bi-box-arrow-up-right me-2"></i>{" "}
-                                      Join Session
-                                    </button>
-                                  </li>
-                                  <li>
-                                    <button
-                                      className="dropdown-item"
-                                      onClick={() =>
-                                        this.endSession(session.id)
-                                      }
-                                    >
-                                      <i className="bi bi-stop-circle me-2"></i>{" "}
-                                      End Session
-                                    </button>
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-
-                            <p className="card-text text-muted">
-                              {session.description}
-                            </p>
-
-                            <div className="mb-3">
-                              <span className="badge course-tag me-2">
-                                <i className="bi bi-journal me-1"></i>{" "}
-                                {course.name}
-                              </span>
-                              <span className="badge bg-light text-dark me-2">
-                                <i className="bi bi-people me-1"></i>{" "}
-                                {session.participants}/{session.maxParticipants}
-                              </span>
-                              <span className="badge bg-light text-dark">
-                                <i className="bi bi-clock me-1"></i>{" "}
-                                {session.startTime} - {session.endTime}
-                              </span>
-                            </div>
-
-                            <div className="d-grid gap-2 d-md-flex justify-content-md-end">
-                              <button
-                                className="btn btn-success me-2"
-                                onClick={() =>
-                                  this.joinSession(session.meetingLink)
-                                }
-                              >
-                                <i className="bi bi-camera-video me-2"></i>
-                                Join Session
-                              </button>
-                              <button
-                                className="btn btn-outline-danger"
-                                onClick={() => this.endSession(session.id)}
-                              >
-                                <i className="bi bi-stop-circle me-2"></i>
-                                End Session
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="d-flex align-items-center">
+                  <div className="avatar-sm flex-shrink-0">
+                    <span className="avatar-title bg-primary-subtle text-primary rounded-2 fs-2">
+                      <i className="bi bi-camera-video"></i>
+                    </span>
+                  </div>
+                  <div className="flex-grow-1 ms-3">
+                    <p className="text-muted mb-1">Total Sessions</p>
+                    <h4 className="mb-0">{liveSessions.length}</h4>
+                  </div>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Upcoming Sessions */}
-          <div className="card mb-4">
-            <div className="card-header">
-              <h5 className="mb-0">
-                <i className="bi bi-calendar-week me-2"></i>
-                Upcoming Sessions
-              </h5>
+          <div className="col-md-3">
+            <div className="card">
+              <div className="card-body">
+                <div className="d-flex align-items-center">
+                  <div className="avatar-sm flex-shrink-0">
+                    <span className="avatar-title bg-success-subtle text-success rounded-2 fs-2">
+                      <i className="bi bi-play-circle"></i>
+                    </span>
+                  </div>
+                  <div className="flex-grow-1 ms-3">
+                    <p className="text-muted mb-1">Live Now</p>
+                    <h4 className="mb-0">{liveSessions.filter(s => s.status === 'live').length}</h4>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="card-body">
-              {upcomingSessions.length === 0 ? (
-                <div className="text-center py-4">
-                  <i className="bi bi-calendar-x fs-1 text-muted mb-3"></i>
-                  <h5>No upcoming sessions</h5>
-                  <p className="text-muted">Schedule your first live session</p>
+          </div>
+
+          <div className="col-md-3">
+            <div className="card">
+              <div className="card-body">
+                <div className="d-flex align-items-center">
+                  <div className="avatar-sm flex-shrink-0">
+                    <span className="avatar-title bg-info-subtle text-info rounded-2 fs-2">
+                      <i className="bi bi-calendar-check"></i>
+                    </span>
+                  </div>
+                  <div className="flex-grow-1 ms-3">
+                    <p className="text-muted mb-1">Upcoming</p>
+                    <h4 className="mb-0">{liveSessions.filter(s => s.status === 'upcoming').length}</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-md-3">
+            <div className="card">
+              <div className="card-body">
+                <div className="d-flex align-items-center">
+                  <div className="avatar-sm flex-shrink-0">
+                    <span className="avatar-title bg-warning-subtle text-warning rounded-2 fs-2">
+                      <i className="bi bi-cash-coin"></i>
+                    </span>
+                  </div>
+                  <div className="flex-grow-1 ms-3">
+                    <p className="text-muted mb-1">Paid Sessions</p>
+                    <h4 className="mb-0">{liveSessions.filter(s => s.isPaid).length}</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters and Actions */}
+        <div className="card mb-3">
+          <div className="card-body">
+            <div className="row g-3">
+              <div className="col-md-3">
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search sessions..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="col-md-2">
+                <select
+                  className="form-select"
+                  value={filters.status}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                >
+                  <option value="">All Status</option>
+                  <option value="draft">Draft</option>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="live">Live</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div className="col-md-2">
+                <select
+                  className="form-select"
+                  value={filters.type}
+                  onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+                >
+                  <option value="">All Types</option>
+                  <option value="live">Live</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="on-demand">On Demand</option>
+                </select>
+              </div>
+
+              <div className="col-md-2">
+                <select
+                  className="form-select"
+                  value={filters.isPaid}
+                  onChange={(e) => setFilters({ ...filters, isPaid: e.target.value })}
+                >
+                  <option value="">All Pricing</option>
+                  <option value="true">Paid</option>
+                  <option value="false">Free</option>
+                </select>
+              </div>
+
+              <div className="col-md-3">
+                <div className="d-flex gap-2">
                   <button
-                    className="btn btn-primary"
-                    onClick={() => this.setState({ showCreateModal: true })}
+                    className="btn btn-outline-secondary"
+                    onClick={() => {
+                      setFilters({
+                        status: '',
+                        category: '',
+                        type: '',
+                        isPaid: ''
+                      });
+                      setSearch('');
+                    }}
                   >
-                    <i className="bi bi-plus-circle me-2"></i>
-                    Schedule Session
+                    <i className="bi bi-arrow-clockwise me-1"></i>
+                    Reset
                   </button>
+
+                  <Link to="/live-sessions/create" className="btn btn-primary">
+                    <i className="bi bi-plus-circle me-1"></i>
+                    Create Live Session
+                  </Link>
                 </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-hover">
-                    <thead>
-                      <tr>
-                        <th>Session</th>
-                        <th>Course</th>
-                        <th>Date & Time</th>
-                        <th>Platform</th>
-                        <th>Participants</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {upcomingSessions.map((session) => {
-                        const course =
-                          courses.find((c) => c.id === session.courseId) || {};
-                        return (
-                          <tr key={session.id}>
-                            <td>
-                              <div>
-                                <strong>{session.title}</strong>
-                                <div className="text-muted small">
-                                  {session.description}
-                                </div>
-                              </div>
-                            </td>
-                            <td>
-                              <span className="badge course-tag">
-                                <i className="bi bi-journal me-1"></i>{" "}
-                                {course.name}
-                              </span>
-                            </td>
-                            <td>
-                              <small>
-                                <i className="bi bi-calendar me-1"></i>{" "}
-                                {session.date}
-                                <br />
-                                <i className="bi bi-clock me-1"></i>{" "}
-                                {session.startTime} - {session.endTime}
-                              </small>
-                            </td>
-                            <td>
-                              <span className="badge bg-light text-dark">
-                                <i
-                                  className={`bi ${this.getPlatformIcon(
-                                    session.meetingPlatform
-                                  )} me-1`}
-                                ></i>
-                                {this.getPlatformName(session.meetingPlatform)}
-                              </span>
-                            </td>
-                            <td>
-                              <div
-                                className="progress"
-                                style={{ height: "6px" }}
-                              >
-                                <div
-                                  className="progress-bar"
-                                  style={{
-                                    width: `${
-                                      (session.participants /
-                                        session.maxParticipants) *
-                                      100
-                                    }%`,
-                                  }}
-                                ></div>
-                              </div>
-                              <small>
-                                {session.participants}/{session.maxParticipants}
-                              </small>
-                            </td>
-                            <td>{this.getStatusBadge(session.status)}</td>
-                            <td>
-                              <div className="dropdown">
-                                <button
-                                  className="btn btn-sm btn-outline-secondary border-0"
-                                  data-bs-toggle="dropdown"
-                                >
-                                  <i className="bi bi-three-dots-vertical"></i>
-                                </button>
-                                <ul className="dropdown-menu">
-                                  <li>
-                                    <button
-                                      className="dropdown-item"
-                                      onClick={() =>
-                                        this.startSession(session.id)
-                                      }
-                                    >
-                                      <i className="bi bi-play-circle me-2"></i>{" "}
-                                      Start Session
-                                    </button>
-                                  </li>
-                                  <li>
-                                    <button
-                                      className="dropdown-item"
-                                      onClick={() =>
-                                        this.joinSession(session.meetingLink)
-                                      }
-                                    >
-                                      <i className="bi bi-box-arrow-up-right me-2"></i>{" "}
-                                      Test Join
-                                    </button>
-                                  </li>
-                                  <li>
-                                    <button className="dropdown-item">
-                                      <i className="bi bi-pencil me-2"></i> Edit
-                                    </button>
-                                  </li>
-                                  <li>
-                                    <hr className="dropdown-divider" />
-                                  </li>
-                                  <li>
-                                    <button className="dropdown-item text-danger">
-                                      <i className="bi bi-trash me-2"></i>{" "}
-                                      Cancel
-                                    </button>
-                                  </li>
-                                </ul>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Past Sessions */}
-          <div className="card">
-            <div className="card-header">
-              <h5 className="mb-0">
-                <i className="bi bi-clock-history me-2"></i>
-                Past Sessions
-              </h5>
-            </div>
-            <div className="card-body">
-              {pastSessions.length === 0 ? (
-                <div className="text-center py-4">
-                  <i className="bi bi-clock-history fs-1 text-muted mb-3"></i>
-                  <h5>No past sessions</h5>
-                  <p className="text-muted">
-                    Completed sessions will appear here
-                  </p>
+        {/* Live Sessions Table */}
+        <div className="card">
+          <div className="card-body">
+            {loading ? (
+              <div className="text-center py-5">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
                 </div>
-              ) : (
-                <div className="row">
-                  {pastSessions.slice(0, 4).map((session) => {
-                    const course =
-                      courses.find((c) => c.id === session.courseId) || {};
-                    return (
-                      <div className="col-md-6 mb-3" key={session.id}>
-                        <div className="card h-100">
-                          <div className="card-body">
-                            <div className="d-flex justify-content-between align-items-start mb-3">
-                              <div>
-                                <h5 className="card-title">{session.title}</h5>
-                                <div className="d-flex align-items-center mb-2">
-                                  <span className="badge bg-secondary me-2">
-                                    Completed
-                                  </span>
-                                  <span className="badge bg-light text-dark">
-                                    <i
-                                      className={`bi ${this.getPlatformIcon(
-                                        session.meetingPlatform
-                                      )} me-1`}
-                                    ></i>
-                                    {this.getPlatformName(
-                                      session.meetingPlatform
-                                    )}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <p className="card-text text-muted">
-                              {session.description}
+                <p className="mt-2">Loading live sessions...</p>
+              </div>
+            ) : filteredData.length === 0 ? (
+              <div className="text-center py-5">
+                <div className="mb-3">
+                  <i className="bi bi-camera-video-slash display-4 text-muted"></i>
+                </div>
+                <h4>No live sessions found</h4>
+                <p className="text-muted mb-4">
+                  {search || Object.values(filters).some(f => f)
+                    ? 'Try changing your search or filters'
+                    : 'Create your first live session to get started'}
+                </p>
+                <Link to="/live-sessions/create" className="btn btn-primary">
+                  <i className="bi bi-plus-circle me-1"></i>
+                  Create Live Session
+                </Link>
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table table-hover table-centered table-nowrap mb-0">
+                  <thead className="table-light">
+                    <tr>
+                      <th>#</th>
+                      <th>Session</th>
+                      <th>Instructor</th>
+                      <th>Schedule</th>
+                      <th>Status</th>
+                      <th>Slots</th>
+                      <th>Price</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredData.map((session, index) => (
+                      <tr key={session._id}>
+                        <td>{index + 1}</td>
+                        <td>
+                          <div>
+                            <h6 className="mb-1">{session.title}</h6>
+                            <p className="text-muted mb-0 small" style={{ maxWidth: '300px' }}>
+                              {session.description.substring(0, 80)}...
                             </p>
-
-                            <div className="mb-3">
-                              <span className="badge course-tag me-2">
-                                <i className="bi bi-journal me-1"></i>{" "}
-                                {course.name}
+                            <div className="mt-1">
+                              <span className="badge bg-light text-dark me-1">
+                                {session.category}
                               </span>
-                              <span className="badge bg-light text-dark me-2">
-                                <i className="bi bi-people me-1"></i>{" "}
-                                {session.participants} attended
-                              </span>
-                              <span className="badge bg-light text-dark">
-                                <i className="bi bi-calendar me-1"></i>{" "}
-                                {session.date}
-                              </span>
-                            </div>
-
-                            <div className="d-flex justify-content-between align-items-center">
-                              <small className="text-muted">
-                                {this.formatDateTime(
-                                  session.date,
-                                  session.startTime
-                                )}
-                              </small>
-                              <div>
-                                {session.recordingAvailable &&
-                                session.recordingUrl ? (
-                                  <button
-                                    className="btn btn-sm btn-outline-primary"
-                                    onClick={() => {
-                                      this.setState({
-                                        selectedRecording: session,
-                                        showRecordingModal: true,
-                                      });
-                                    }}
-                                  >
-                                    <i className="bi bi-play-circle me-1"></i>{" "}
-                                    View Recording
-                                  </button>
-                                ) : (
-                                  <span className="badge bg-secondary">
-                                    No Recording
-                                  </span>
-                                )}
-                              </div>
+                              {session.tags?.slice(0, 2).map((tag, i) => (
+                                <span key={i} className="badge bg-light text-dark me-1">
+                                  {tag}
+                                </span>
+                              ))}
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                        </td>
+                        <td>
+                          <div>
+                            <strong>{session.instructor?.name || 'N/A'}</strong>
+                            <br />
+                            <small className="text-muted">
+                              {session.instructor?.email || session.instructor}
+                            </small>
+                          </div>
+                        </td>
+                        <td>
+                          <div>
+                            <div><strong>Start:</strong> {formatDate(session.schedule?.startTime)}</div>
+                            <div><strong>End:</strong> {formatDate(session.schedule?.endTime)}</div>
+                            <div className="text-muted small">
+                              Duration: {session.schedule?.duration || 0} mins
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={getStatusBadge(session.status)}>
+                            {session.status?.toUpperCase()}
+                          </span>
+                        </td>
+                        <td>
+                          <div>
+                            <div className="progress" style={{ height: '6px' }}>
+                              <div
+                                className="progress-bar"
+                                role="progressbar"
+                                style={{
+                                  width: `${((session.totalSlots - session.availableSlots) / session.totalSlots) * 100}%`
+                                }}
+                              ></div>
+                            </div>
+                            <small className="text-muted">
+                              {session.totalSlots - session.availableSlots} / {session.totalSlots} filled
+                            </small>
+                          </div>
+                        </td>
+                        <td>
+                          {session.isPaid ? (
+                            <div>
+                              <strong className="text-success">${session.price}</strong>
+                              {session.discountedPrice && (
+                                <div className="text-muted small">
+                                  <s>${session.discountedPrice}</s>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="badge bg-success">FREE</span>
+                          )}
+                        </td>
+                        <td>
+                          <div className="d-flex gap-2">
+                            {/* View Details */}
+                            <Link
+                              to={`/live-sessions/view/${session._id}`}
+                              className="btn btn-sm btn-outline-primary"
+                              title="View Details"
+                            >
+                              <Eye size={16} />
+                            </Link>
+
+                            {/* Edit */}
+                            <Link
+                              to={`/live-sessions/edit/${session._id}`}
+                              className="btn btn-sm btn-outline-warning"
+                              title="Edit"
+                            >
+                              <Edit size={16} />
+                            </Link>
+
+                            {/* Start Session Button (only for upcoming) */}
+                            {session.status === 'upcoming' && (
+                              <button
+                                className="btn btn-sm btn-success"
+                                onClick={() => handleStartSession(session._id)}
+                                title="Start Session"
+                              >
+                                <Play size={16} />
+                              </button>
+                            )}
+
+                            {/* End Session Button (only for live) */}
+                            {session.status === 'live' && (
+                              <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => handleEndSession(session._id)}
+                                title="End Session"
+                              >
+                                <StopCircle size={16} />
+                              </button>
+                            )}
+
+                            {/* Join Button (for live sessions) */}
+                            {session.status === 'live' && session.liveDetails?.meetingUrl && (
+                              <a
+                                href={session.liveDetails.meetingUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-sm btn-info"
+                                title="Join Session"
+                              >
+                                <BoxArrowUpRight size={16} />
+                              </a>
+                            )}
+
+                            {/* Delete */}
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => handleDelete(session._id)}
+                              title="Delete"
+                            >
+                              <Trash size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-
-          {/* Create Session Modal */}
-          {showCreateModal && (
-            <div className="modal fade show d-block" tabIndex="-1">
-              <div className="modal-dialog modal-lg">
-                <div className="modal-content">
-                  <div className="modal-header">
-                    <h5 className="modal-title">Schedule New Live Session</h5>
-                    <button
-                      type="button"
-                      className="btn-close"
-                      onClick={() => this.setState({ showCreateModal: false })}
-                    ></button>
-                  </div>
-                  <form onSubmit={this.handleCreateSession}>
-                    <div className="modal-body">
-                      <div className="row">
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">Course *</label>
-                          <select
-                            className="form-select"
-                            name="courseId"
-                            value={newSession.courseId}
-                            onChange={this.handleInputChange}
-                            required
-                          >
-                            <option value="">Select a course</option>
-                            {courses.map((course) => (
-                              <option key={course.id} value={course.id}>
-                                {course.name} ({course.code})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">
-                            Meeting Platform *
-                          </label>
-                          <select
-                            className="form-select"
-                            name="meetingPlatform"
-                            value={newSession.meetingPlatform}
-                            onChange={this.handleInputChange}
-                            required
-                          >
-                            <option value="zoom">Zoom</option>
-                            <option value="google_meet">Google Meet</option>
-                            <option value="microsoft_teams">
-                              Microsoft Teams
-                            </option>
-                            <option value="custom">Custom Link</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="mb-3">
-                        <label className="form-label">Session Title *</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          name="title"
-                          value={newSession.title}
-                          onChange={this.handleInputChange}
-                          placeholder="e.g., Introduction to Calculus"
-                          required
-                        />
-                      </div>
-
-                      <div className="mb-3">
-                        <label className="form-label">Description</label>
-                        <textarea
-                          className="form-control"
-                          name="description"
-                          value={newSession.description}
-                          onChange={this.handleInputChange}
-                          rows="3"
-                          placeholder="Brief description of the session"
-                        ></textarea>
-                      </div>
-
-                      <div className="row">
-                        <div className="col-md-4 mb-3">
-                          <label className="form-label">Date *</label>
-                          <input
-                            type="date"
-                            className="form-control"
-                            name="date"
-                            value={newSession.date}
-                            onChange={this.handleInputChange}
-                            required
-                          />
-                        </div>
-
-                        <div className="col-md-4 mb-3">
-                          <label className="form-label">Start Time *</label>
-                          <input
-                            type="time"
-                            className="form-control"
-                            name="startTime"
-                            value={newSession.startTime}
-                            onChange={this.handleInputChange}
-                            required
-                          />
-                        </div>
-
-                        <div className="col-md-4 mb-3">
-                          <label className="form-label">End Time</label>
-                          <input
-                            type="time"
-                            className="form-control"
-                            name="endTime"
-                            value={newSession.endTime}
-                            onChange={this.handleInputChange}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="row">
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">Meeting Link</label>
-                          <input
-                            type="url"
-                            className="form-control"
-                            name="meetingLink"
-                            value={newSession.meetingLink}
-                            onChange={this.handleInputChange}
-                            placeholder="Leave empty to auto-generate"
-                          />
-                          <small className="text-muted">
-                            If empty, a link will be generated
-                          </small>
-                        </div>
-
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">Max Participants</label>
-                          <input
-                            type="number"
-                            className="form-control"
-                            name="maxParticipants"
-                            value={newSession.maxParticipants}
-                            onChange={this.handleInputChange}
-                            min="1"
-                            max="1000"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="mb-3">
-                        <div className="form-check">
-                          <input
-                            className="form-check-input"
-                            type="checkbox"
-                            name="recordingEnabled"
-                            checked={newSession.recordingEnabled}
-                            onChange={(e) =>
-                              this.handleInputChange({
-                                target: {
-                                  name: "recordingEnabled",
-                                  value: e.target.checked,
-                                },
-                              })
-                            }
-                          />
-                          <label className="form-check-label">
-                            Enable recording for this session
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="modal-footer">
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() =>
-                          this.setState({ showCreateModal: false })
-                        }
-                      >
-                        Cancel
-                      </button>
-                      <button type="submit" className="btn btn-primary">
-                        <i className="bi bi-calendar-plus me-2"></i>
-                        Schedule Session
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Recording Modal */}
-          {showRecordingModal && selectedRecording && (
-            <div className="modal fade show d-block" tabIndex="-1">
-              <div className="modal-dialog modal-lg">
-                <div className="modal-content">
-                  <div className="modal-header">
-                    <h5 className="modal-title">Session Recording</h5>
-                    <button
-                      type="button"
-                      className="btn-close"
-                      onClick={() =>
-                        this.setState({
-                          showRecordingModal: false,
-                          selectedRecording: null,
-                        })
-                      }
-                    ></button>
-                  </div>
-                  <div className="modal-body">
-                    <div className="text-center mb-4">
-                      <i className="bi bi-play-circle fs-1 text-primary mb-3"></i>
-                      <h4>{selectedRecording.title}</h4>
-                      <p className="text-muted">
-                        Recording will be available shortly after the session
-                        ends
-                      </p>
-                    </div>
-
-                    <div className="alert alert-info">
-                      <i className="bi bi-info-circle me-2"></i>
-                      The recording is being processed. It will be available for
-                      students to review.
-                    </div>
-
-                    <div className="d-grid gap-2">
-                      <button className="btn btn-primary">
-                        <i className="bi bi-play-circle me-2"></i>
-                        Play Recording
-                      </button>
-                      <button className="btn btn-outline-secondary">
-                        <i className="bi bi-download me-2"></i>
-                        Download Recording
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Backdrop for modals */}
-          {(showCreateModal || showRecordingModal) && (
-            <div className="modal-backdrop fade show"></div>
-          )}
         </div>
       </div>
-    );
-  }
-}
+    </div>
+  );
+};
 
 export default LiveSessionPage;
