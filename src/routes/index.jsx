@@ -88,6 +88,7 @@ import MentorRoomManagement from "../pages/MentorRoom/MentorRoomManagement";
 import HomePageManagement from "../pages/HomePage/HomePageManagement";
 import Enrollments from "../pages/Enrollements/Enrollements";
 import CreateLiveSessionPage from "../pages/Instructor/AddLiveSession";
+import StudyBit from "../pages/Dashboard/StudyBit/StudyBit";
 
 // ======================================================================
 // 🔒 AUTH PROTECTED ROUTES
@@ -151,6 +152,7 @@ const authProtectedRoutes = [
   { path: "/webinar-management/edit/:id", component: <WebinarManagementEdit /> },
   { path: "/webinar-management/register", component: <WebinarManagementRegister /> },
   { path: "/mentor-room", component: <MentorRoomManagement /> },
+  { path: "/study-bit", component: <StudyBit /> },
 
   // Home Page Management
   { path: "/home-page", component: <HomePageManagement /> },

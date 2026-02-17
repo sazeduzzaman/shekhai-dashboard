@@ -22,7 +22,7 @@ import {
   Bell,
   User,
 } from "react-feather";
-import { DollarSignIcon, LucideBookOpen, Repeat1, Sliders, SunsetIcon, Users2 } from "lucide-react";
+import { BookAlert, DollarSignIcon, LucideBookOpen, Repeat1, Sliders, SunsetIcon, Users2 } from "lucide-react";
 
 const SidebarContent = ({ t }) => {
   const ref = useRef();
@@ -379,6 +379,12 @@ const SidebarContent = ({ t }) => {
                 <Link to="/all/live-sessions" onClick={collapseAll}>
                   <Video size={18} className="me-2" />
                   {t("Live Sessions")}
+                </Link>
+              </li>
+              <li>
+                <Link to="/study-bit" onClick={collapseAll}>
+                  <BookAlert size={18} className="me-2" />
+                  {t("Study Bit")}
                 </Link>
               </li>
               <li>
