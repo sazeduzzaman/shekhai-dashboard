@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Breadcrumbs from "../../components/Common/Breadcrumb";
-import { Eye, EyeSlash } from "react-bootstrap-icons"; // You can use any icon library
+import { Eye, EyeSlash } from "react-bootstrap-icons";
 
 const AddUsers = () => {
   const navigate = useNavigate();
@@ -19,14 +19,12 @@ const AddUsers = () => {
       name: "",
       email: "",
       password: "",
-      role: "instructor", // lowercase for backend
+      role: "instructor",
     },
 
     validationSchema: Yup.object({
       name: Yup.string().min(2, "Too short").required("Required"),
-
       email: Yup.string().email("Invalid email").required("Required"),
-
       password: Yup.string()
         .min(8, "Password must be at least 8 characters")
         .matches(/[A-Z]/, "Must include at least one uppercase letter")
@@ -34,7 +32,6 @@ const AddUsers = () => {
         .matches(/\d/, "Must include at least one number")
         .matches(/[@$!%*?&]/, "Must include at least one special character")
         .required("Required"),
-
       role: Yup.string()
         .oneOf(["student", "instructor", "admin"])
         .required("Required"),
@@ -60,7 +57,7 @@ const AddUsers = () => {
           resetForm();
 
           setTimeout(() => {
-            navigate("/users"); // redirect after success
+            navigate("/users");
           }, 3000);
         } else {
           toast.error(data.message || "Something went wrong!");
@@ -106,6 +103,7 @@ const AddUsers = () => {
               <input
                 type="text"
                 name="name"
+                autoComplete="off" // Disable autofill
                 className={`form-control ${
                   formik.touched.name && formik.errors.name && "is-invalid"
                 }`}
@@ -123,6 +121,7 @@ const AddUsers = () => {
               <input
                 type="email"
                 name="email"
+                autoComplete="off" // Disable autofill
                 className={`form-control ${
                   formik.touched.email && formik.errors.email && "is-invalid"
                 }`}
@@ -140,6 +139,7 @@ const AddUsers = () => {
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
+                autoComplete="new-password" // Use "new-password" to prevent autofill
                 className={`form-control ${
                   formik.touched.password && formik.errors.password
                     ? "is-invalid"
@@ -167,6 +167,7 @@ const AddUsers = () => {
               <label className="form-label">Role</label>
               <select
                 name="role"
+                autoComplete="off" // Disable autofill
                 className="form-select"
                 {...formik.getFieldProps("role")}
               >

@@ -223,7 +223,7 @@ const AllCourses = () => {
                       <th>Total Modules</th>
                       <th>Created At</th>
                       <th>Status</th>
-                      <th style={{ width: "150px" }}>Actions</th>
+                      <th style={{ width: "150px" }} className="text-center">Actions</th>
                     </tr>
                   </thead>
 
@@ -317,14 +317,14 @@ const AllCourses = () => {
 
                           {/* ACTIONS */}
                           <td>
-                            <div className="d-flex gap-2">
-                              <Link
+                            <div className="d-flex justify-content-center gap-2">
+                              {/* <Link
                                 to={`/courses/view/${item._id}`}
                                 className="btn btn-sm btn-primary"
                                 title="View"
                               >
                                 <i className="mdi mdi-eye"></i>
-                              </Link>
+                              </Link> */}
 
                               {/* Edit Button */}
                               {(userRole === "admin" || isMyCourse) && (

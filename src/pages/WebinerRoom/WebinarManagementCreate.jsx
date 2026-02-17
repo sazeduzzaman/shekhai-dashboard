@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { 
-  Card, CardBody, Container, Row, Col, 
+import {
+  Card, CardBody, Container, Row, Col,
   Button, Form, Input, Label, FormGroup, Alert,
   CardImg
 } from 'reactstrap';
@@ -61,7 +61,7 @@ const WebinarManagementCreate = () => {
   const handleFileChange = (e) => {
     const { name, files } = e.target;
     const file = files[0];
-    
+
     if (file) {
       // Update form data with file
       setFormData({
@@ -84,12 +84,12 @@ const WebinarManagementCreate = () => {
       ...formData,
       [fieldName]: null
     });
-    
+
     // Revoke the object URL to avoid memory leaks
     if (imagePreviews[fieldName]) {
       URL.revokeObjectURL(imagePreviews[fieldName]);
     }
-    
+
     setImagePreviews({
       ...imagePreviews,
       [fieldName]: null
@@ -153,10 +153,10 @@ const WebinarManagementCreate = () => {
 
       const result = await response.json();
       console.log("API Response:", result);
-      
+
       if (response.ok && result.success) {
         toast.success("Webinar created successfully!");
-        
+
         // Reset form
         setFormData({
           title: "",
@@ -177,7 +177,7 @@ const WebinarManagementCreate = () => {
           instructorAvatar: null,
           tags: ""
         });
-        
+
         // Clear image previews
         Object.values(imagePreviews).forEach(preview => {
           if (preview) URL.revokeObjectURL(preview);
@@ -187,7 +187,7 @@ const WebinarManagementCreate = () => {
           bannerImage: null,
           instructorAvatar: null
         });
-        
+
       } else {
         // Display validation errors if any
         if (result.errors) {
@@ -551,8 +551,8 @@ const WebinarManagementCreate = () => {
                             src={imagePreviews.instructorAvatar}
                             alt="Avatar preview"
                             className="mb-2 rounded-circle"
-                            style={{ 
-                              maxHeight: "150px", 
+                            style={{
+                              maxHeight: "150px",
                               objectFit: "cover",
                               width: "150px",
                               height: "150px"
@@ -646,9 +646,13 @@ const WebinarManagementCreate = () => {
                 </Col>
 
                 <Col lg={6}>
-                  <FormGroup>
-                    <Label htmlFor="status" className="form-label">Status</Label>
+                  <div className="d-flex align-items-center gap-3">
+                    <Label htmlFor="status" className="form-label mb-0">
+                      Status
+                    </Label>
+
                     <Input
+                    className='w-50'
                       type="select"
                       id="status"
                       name="status"
@@ -660,8 +664,9 @@ const WebinarManagementCreate = () => {
                       <option value="published">Published</option>
                       <option value="scheduled">Scheduled</option>
                     </Input>
-                  </FormGroup>
+                  </div>
                 </Col>
+
 
                 <Col lg={6}>
                   <FormGroup>
@@ -709,7 +714,7 @@ const WebinarManagementCreate = () => {
                       <i className="ri-arrow-left-line me-1"></i>
                       Back
                     </Button>
-                    
+
                     <div className="d-flex gap-2">
                       <Button
                         type="button"
@@ -719,7 +724,7 @@ const WebinarManagementCreate = () => {
                           Object.values(imagePreviews).forEach(preview => {
                             if (preview) URL.revokeObjectURL(preview);
                           });
-                          
+
                           setFormData({
                             title: "",
                             badge: "webinar",
@@ -739,7 +744,7 @@ const WebinarManagementCreate = () => {
                             instructorAvatar: null,
                             tags: ""
                           });
-                          
+
                           setImagePreviews({
                             thumbnail: null,
                             bannerImage: null,
@@ -751,7 +756,7 @@ const WebinarManagementCreate = () => {
                         <i className="ri-refresh-line me-1"></i>
                         Reset Form
                       </Button>
-                      
+
                       <Button
                         type="submit"
                         color="primary"

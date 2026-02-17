@@ -276,17 +276,23 @@ const WebinarManagementRegister = () => {
       "Payment Amount",
     ];
 
-    const csvData = registrations.map((reg) => [
-      `"${reg.user?.name || ""}"`,
-      `"${reg.user?.email || ""}"`,
-      `"${reg.user?.phone || ""}"`,
-      `"${reg.user?.role || ""}"`,
-      `"${reg.user?.organization || ""}"`,
-      `"${reg.status || ""}"`,
-      `"${formatDate(reg.createdAt)}"`,
-      `"${reg.payment?.status || "N/A"}"`,
-      `"${reg.payment?.amount || 0}"`,
-    ]);
+    const csvData = registrations.map((reg, index) => {
+      const registrationNo = `REG-${Date.now().toString().slice(-5)}-${index + 1}`;
+
+      return [
+        `"${registrationNo}"`,
+        `"${reg.user?.name || ""}"`,
+        `"${reg.user?.email || ""}"`,
+        `"${reg.user?.phone || ""}"`,
+        `"${reg.user?.role || ""}"`,
+        `"${reg.user?.organization || ""}"`,
+        `"${reg.status || ""}"`,
+        `"${formatDate(reg.createdAt)}"`,
+        `"${reg.payment?.status || "N/A"}"`,
+        // `"${reg.payment?.amount ?? "N/A"}"`,
+      ];
+    });
+
 
     const csvContent = [
       headers.join(","),
@@ -539,7 +545,7 @@ const WebinarManagementRegister = () => {
                             {Math.max(
                               0,
                               (selectedWebinar.maxParticipants || 0) -
-                                (selectedWebinar.currentParticipants || 0),
+                              (selectedWebinar.currentParticipants || 0),
                             )}
                           </div>
                           <Button

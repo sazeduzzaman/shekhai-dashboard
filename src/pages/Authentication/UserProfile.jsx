@@ -9,6 +9,7 @@ import {
   CardBody,
   CardTitle,
   Spinner,
+  Badge,
 } from "reactstrap";
 
 import Breadcrumb from "../../components/Common/Breadcrumb";
@@ -60,14 +61,26 @@ const UserProfile = () => {
     fetchUser();
   }, []);
 
+  // Helper function to format date
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   if (loading)
     return (
-      <p className="text-center mt-5">
+      <div className="text-center mt-5">
         <Spinner size="sm" /> Loading...
-      </p>
+      </div>
     );
 
-  if (!user) return <p className="text-center mt-5">No user data found.</p>;
+  if (!user) return <div className="text-center mt-5">No user data found.</div>;
 
   return (
     <div className="page-content">
@@ -107,24 +120,36 @@ const UserProfile = () => {
 
                 <h5 className="fw-bold text-capitalize">{user.name}</h5>
                 <p className="text-muted mb-1">{user.email}</p>
-                <span className="badge bg-info text-dark text-capitalize">
-                  {user.role}
-                </span>
+                <div className="d-flex gap-2 justify-content-center mt-2">
+                  <Badge color="info" className="text-capitalize">
+                    {user.role}
+                  </Badge>
+                  {user.isActive ? (
+                    <Badge color="success">Active</Badge>
+                  ) : (
+                    <Badge color="danger">Inactive</Badge>
+                  )}
+                  {user.isEmailVerified ? (
+                    <Badge color="primary">Email Verified</Badge>
+                  ) : (
+                    <Badge color="warning">Email Unverified</Badge>
+                  )}
+                </div>
               </CardBody>
             </Card>
 
-            {/* Personal Info */}
+            {/* All Information Card */}
             <Card className="shadow-sm mt-4">
               <CardBody>
-                <h1 className="mb-3">
-                  All Info
-                </h1>
-                <div className="table-responsive pt-3">
+                <h5 className="mb-3 fw-bold">All Information</h5>
+                <div className="table-responsive pt-2">
                   <table className="table table-borderless table-striped mb-0">
                     <tbody>
                       <tr>
-                        <th className="text-muted">Full Name:</th>
-                        <td>{user.name}</td>
+                        <th className="text-muted" style={{ width: "40%" }}>
+                          Full Name:
+                        </th>
+                        <td className="text-capitalize">{user.name}</td>
                       </tr>
                       <tr>
                         <th className="text-muted">Email:</th>
@@ -138,11 +163,102 @@ const UserProfile = () => {
                         <th className="text-muted">Bio:</th>
                         <td>{user.bio || "No bio added"}</td>
                       </tr>
+                      <tr>
+                        <th className="text-muted">Status:</th>
+                        <td>
+                          {user.isActive ? (
+                            <Badge color="success" pill>
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge color="danger" pill>
+                              Inactive
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th className="text-muted">Email Verified:</th>
+                        <td>
+                          {user.isEmailVerified ? (
+                            <Badge color="primary" pill>
+                              Verified
+                            </Badge>
+                          ) : (
+                            <Badge color="warning" pill>
+                              Not Verified
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th className="text-muted">Rating:</th>
+                        <td>
+                          {user.rating > 0 ? (
+                            <span>⭐ {user.rating.toFixed(1)}</span>
+                          ) : (
+                            "No ratings yet"
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th className="text-muted">Total Students:</th>
+                        <td>
+                          <Badge color="info" pill>
+                            {user.totalStudents || 0}
+                          </Badge>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th className="text-muted">Member Since:</th>
+                        <td>{formatDate(user.createdAt)}</td>
+                      </tr>
+                      <tr>
+                        <th className="text-muted">Last Updated:</th>
+                        <td>{formatDate(user.updatedAt)}</td>
+                      </tr>
+                      <tr>
+                        <th className="text-muted">User ID:</th>
+                        <td>
+                          <small className="text-muted">{user._id}</small>
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
               </CardBody>
             </Card>
+
+            {/* Courses Information Cards */}
+            {user.role === "instructor" && (
+              <Card className="shadow-sm mt-4">
+                <CardBody>
+                  <h5 className="mb-3 fw-bold">Instructor Stats</h5>
+                  <div className="d-flex justify-content-around text-center">
+                    <div>
+                      <h6 className="text-muted">Courses</h6>
+                      <h4 className="mb-0">{user.courses?.length || 0}</h4>
+                    </div>
+                    <div>
+                      <h6 className="text-muted">Expertise</h6>
+                      <h4 className="mb-0">{user.expertise?.length || 0}</h4>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
+
+            {user.role === "student" && (
+              <Card className="shadow-sm mt-4">
+                <CardBody>
+                  <h5 className="mb-3 fw-bold">Student Stats</h5>
+                  <div className="text-center">
+                    <h6 className="text-muted">Enrolled Courses</h6>
+                    <h4 className="mb-0">{user.enrolledCourses?.length || 0}</h4>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
           </Col>
 
           {/* RIGHT COLUMN — EDIT FORM */}

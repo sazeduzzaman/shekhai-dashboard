@@ -21,8 +21,8 @@ import {
   Layers,
   Bell,
   User,
-  PlayCircle,
 } from "react-feather";
+import { DollarSignIcon, LucideBookOpen, Repeat1, Sliders, SunsetIcon, Users2 } from "lucide-react";
 
 const SidebarContent = ({ t }) => {
   const ref = useRef();
@@ -95,8 +95,8 @@ const SidebarContent = ({ t }) => {
     if (matchingMenuItem) {
       activateParentDropdown(matchingMenuItem);
     } else {
-        // If it's a root path or dashboard, ensure clean state
-        collapseAll();
+      // If it's a root path or dashboard, ensure clean state
+      collapseAll();
     }
   }, [location.pathname, activateParentDropdown, collapseAll]);
 
@@ -104,13 +104,13 @@ const SidebarContent = ({ t }) => {
   useEffect(() => {
     // Initialize MetisMenu with toggle: true for Accordion effect
     metisMenuRef.current = new MetisMenu("#side-menu", {
-        toggle: true
+      toggle: true
     });
-    
+
     activeMenu();
-    
+
     return () => {
-        if (metisMenuRef.current) metisMenuRef.current.dispose();
+      if (metisMenuRef.current) metisMenuRef.current.dispose();
     };
   }, [userRole]); // Re-init on role change
 
@@ -313,17 +313,17 @@ const SidebarContent = ({ t }) => {
                   <li>
                     <Link to="/courses/add">{t("Add Course")}</Link>
                   </li>
-                  <li>
+                  {/* <li>
                     <Link to="/courses/review">{t("Course Reviews")}</Link>
-                  </li>
-                  <li>
+                  </li> */}
+                  {/* <li>
                     <Link to="/courses/approval">{t("Approval Queue")}</Link>
-                  </li>
+                  </li> */}
                 </ul>
               </li>
               <li>
                 <Link to="/#" className="has-arrow">
-                  <BookOpen size={18} className="align-middle me-2" />
+                  <DollarSignIcon size={18} className="align-middle me-2" />
                   <span>{t("Enrollments")}</span>
                 </Link>
                 <ul className="sub-menu">
@@ -344,35 +344,35 @@ const SidebarContent = ({ t }) => {
                   <li>
                     <Link to="/instructors/add">{t("Add Instructor")}</Link>
                   </li>
-                  <li>
+                  {/* <li>
                     <Link to="/instructors/performance">
                       {t("Performance")}
                     </Link>
-                  </li>
+                  </li> */}
                 </ul>
               </li>
               <li>
                 <Link to="/contacts-list" onClick={collapseAll}>
-                  <Settings size={18} className="me-2" />
+                  <Repeat1 size={18} className="me-2" />
                   {t("Contact List")}
                 </Link>
               </li>
               <li>
                 <Link to="/webinar-management" onClick={collapseAll}>
-                  <Settings size={18} className="me-2" />
+                  <SunsetIcon size={18} className="me-2" />
                   {t("Webinar Management")}
                 </Link>
               </li>
               <li>
                 <Link to="/mentor-room" onClick={collapseAll}>
-                  <Settings size={18} className="me-2" />
-                  {t("Mentor Room Management")}
+                  <Users2 size={18} className="me-2" />
+                  {t("Mentor Room")}
                 </Link>
               </li>
               <li>
                 <Link to="/home-page" onClick={collapseAll}>
-                  <Settings size={18} className="me-2" />
-                  {t("Home Page Management")}
+                  <Sliders size={18} className="me-2" />
+                  {t("Home Page")}
                 </Link>
               </li>
               <li>

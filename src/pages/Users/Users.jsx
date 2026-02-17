@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Table,
   Button,
@@ -11,6 +11,7 @@ import {
   FormGroup,
   Label,
   Input,
+  Spinner
 } from "reactstrap";
 import Breadcrumbs from "../../components/Common/Breadcrumb";
 import axios from "axios";
@@ -21,14 +22,17 @@ import "./Users.css";
 import { User } from "lucide-react";
 
 const Users = () => {
-  const [instructors, setUsers] = useState([]);
+  const navigate = useNavigate();
+  const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Modals
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [selectedInstructor, setSelectedInstructor] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   // Form state for editing
   const [formData, setFormData] = useState({
@@ -40,11 +44,44 @@ const Users = () => {
 
   document.title = "All Users | LMS Dashboard";
 
-  const saved = localStorage.getItem("authUser");
-  const parsed = saved ? JSON.parse(saved) : null;
-  const token = parsed?.token;
+  // Helper function to get token
+  const getToken = () => {
+    const saved = localStorage.getItem("authUser");
+    if (!saved) return null;
+    try {
+      const parsed = JSON.parse(saved);
+      return parsed?.token || null;
+    } catch (error) {
+      console.error("Error parsing auth user:", error);
+      return null;
+    }
+  };
 
-  const fetchUsers = async () => {
+  // Check authentication status
+  const checkAuth = () => {
+    const token = getToken();
+    if (!token) {
+      localStorage.removeItem("authUser");
+      navigate("/login");
+      return false;
+    }
+    return true;
+  };
+
+  // Fetch users with retry mechanism
+  const fetchUsers = async (retryCount = 0) => {
+    const token = getToken();
+    
+    if (!token) {
+      if (retryCount < 2) {
+        // Wait and retry (useful right after login)
+        setTimeout(() => fetchUsers(retryCount + 1), 500);
+        return;
+      }
+      navigate("/login");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await axios.get(
@@ -53,41 +90,92 @@ const Users = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+      console.log("Fetched users:", res.data);
       setUsers(res.data.users || []);
+      setAuthChecked(true);
     } catch (err) {
-      console.log(err);
-      toast.error("Failed to load instructors");
+      console.error("Fetch error:", err);
+      
+      // Handle unauthorized error
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        if (retryCount < 2) {
+          // Wait and retry (token might be being refreshed)
+          setTimeout(() => fetchUsers(retryCount + 1), 1000);
+          return;
+        }
+        // If still unauthorized after retries, redirect to login
+        localStorage.removeItem("authUser");
+        navigate("/login");
+        toast.error("Session expired. Please login again.");
+      } else {
+        toast.error(err.response?.data?.message || "Failed to load users");
+      }
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   };
 
+  // Initialize on mount and when localStorage changes
   useEffect(() => {
-    if (!token) {
-      localStorage.removeItem("authUser");
-      window.location.href = "/login";
-      return;
-    }
-    fetchUsers();
+    let mounted = true;
+
+    const initialize = async () => {
+      if (!checkAuth()) return;
+      
+      if (mounted) {
+        await fetchUsers();
+      }
+    };
+
+    initialize();
+
+    // Listen for storage changes (login/logout in other tabs)
+    const handleStorageChange = (e) => {
+      if (e.key === "authUser") {
+        const newToken = getToken();
+        if (!newToken && mounted) {
+          navigate("/login");
+        } else if (newToken && mounted) {
+          fetchUsers();
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []); // Run only once on mount
+
+  // Add a visibility change listener to refresh data when tab becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && checkAuth()) {
+        fetchUsers();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
-  // -----------------
   // VIEW MODAL
-  // -----------------
   const handleView = (user) => {
-    setSelectedInstructor(user);
+    setSelectedUser(user);
     setViewModalOpen(true);
   };
 
-  // -----------------
   // EDIT MODAL
-  // -----------------
   const handleEdit = (user) => {
-    setSelectedInstructor(user);
+    console.log("Editing user:", user);
+    setSelectedUser(user);
     setFormData({
-      name: user.name,
-      email: user.email,
-      role: user.role,
+      name: user.name || "",
+      email: user.email || "",
+      role: user.role || "student",
       status: user.status || "Active",
     });
     setEditModalOpen(true);
@@ -98,25 +186,72 @@ const Users = () => {
   };
 
   const handleUpdate = async (id) => {
+    const token = getToken();
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
     try {
+      const updateData = {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+        status: formData.status,
+      };
+
+      console.log("Sending update data:", updateData);
+
       const res = await axios.put(
         `https://shekhai-server.onrender.com/api/v1/users/${id}`,
-        formData,
+        updateData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success("Instructor updated successfully!");
-      // Update local state
-      setUsers((prev) => prev.map((i) => (i._id === id ? res.data.user : i)));
+
+      console.log("Update response:", res.data);
+
+      if (res.data && res.data.user) {
+        setUsers((prevUsers) => 
+          prevUsers.map((user) => 
+            user._id === id ? res.data.user : user
+          )
+        );
+        toast.success("User updated successfully!");
+      } else {
+        setUsers((prevUsers) => 
+          prevUsers.map((user) => 
+            user._id === id ? { ...user, ...updateData } : user
+          )
+        );
+        toast.success("User updated successfully!");
+      }
+      
       setEditModalOpen(false);
+      
+      // Refresh to ensure latest data
+      fetchUsers();
+      
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to update instructor");
+      console.error("Update error:", err);
+      
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem("authUser");
+        navigate("/login");
+        toast.error("Session expired. Please login again.");
+      } else {
+        toast.error(err.response?.data?.message || "Failed to update user");
+      }
     }
   };
 
-  // -----------------
   // DELETE
-  // -----------------
   const handleDelete = (id) => {
+    const token = getToken();
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
     toast.info(
       <div>
         <p>Are you sure you want to delete this user?</p>
@@ -132,16 +267,20 @@ const Users = () => {
                     headers: { Authorization: `Bearer ${token}` },
                   }
                 );
-                setUsers((prev) => prev.filter((i) => i._id !== id));
+                setUsers((prev) => prev.filter((user) => user._id !== id));
                 toast.success("User deleted successfully!");
               } catch (err) {
-                toast.error(
-                  err.response?.data?.message || "Failed to delete User"
-                );
+                if (err.response?.status === 401 || err.response?.status === 403) {
+                  localStorage.removeItem("authUser");
+                  navigate("/login");
+                  toast.error("Session expired. Please login again.");
+                } else {
+                  toast.error(err.response?.data?.message || "Failed to delete user");
+                }
               }
             }}
           >
-            Yes
+            Yes, Delete
           </button>
           <button
             className="btn btn-sm btn-secondary"
@@ -155,18 +294,47 @@ const Users = () => {
     );
   };
 
-  const filteredData = instructors.filter(
+  const filteredData = users.filter(
     (item) =>
       item.name?.toLowerCase().includes(search.toLowerCase()) ||
+      item.email?.toLowerCase().includes(search.toLowerCase()) ||
       item.role?.toLowerCase().includes(search.toLowerCase())
   );
-  console.log(filteredData)
+
+  // Show loading spinner while checking auth and initial fetch
+  if (initialLoading) {
+    return (
+      <div className="page-content">
+        <div className="container-fluid">
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "400px" }}>
+            <div className="text-center">
+              <Spinner color="primary" style={{ width: "3rem", height: "3rem" }}>
+                Loading...
+              </Spinner>
+              <p className="mt-3">Loading users...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-content">
-      <ToastContainer position="top-right" />
+      <ToastContainer 
+        position="top-right" 
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <div className="container-fluid">
-        <Breadcrumbs title="Instructors" breadcrumbItem="All Users" />
+        <Breadcrumbs title="Users" breadcrumbItem="All Users" />
 
         <div className="card mb-3 shadow-none">
           <div className="card-header pt-4 d-flex justify-content-between align-items-center bg-white">
@@ -174,32 +342,34 @@ const Users = () => {
               type="text"
               className="form-control"
               style={{ width: "280px" }}
-              placeholder="Search instructors..."
+              placeholder="Search users..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             <Link to="/users/add" className="btn btn-success">
-              <i className="mdi mdi-plus me-1"></i> Add Instructor
+              <i className="mdi mdi-plus me-1"></i> Add User
             </Link>
           </div>
 
           <div className="card-body pt-0">
             {loading ? (
-              <div className="spinner-container">
-                <div className="spinner"></div>
-                <p className="mt-2">Loading instructors...</p>
+              <div className="text-center py-5">
+                <Spinner color="primary" style={{ width: "3rem", height: "3rem" }}>
+                  Loading...
+                </Spinner>
+                <p className="mt-3">Loading users...</p>
               </div>
             ) : (
               <div className="table-responsive">
-                <Table bordered striped>
+                <Table bordered striped hover>
                   <thead className="table-light">
                     <tr>
                       <th>#</th>
                       <th>Image</th>
                       <th>Name</th>
                       <th>Email</th>
-                      <th>Create At</th>
-                      <th>Update At</th>
+                      <th>Created At</th>
+                      <th>Updated At</th>
                       <th>Role</th>
                       <th>Status</th>
                       <th className="text-center">Actions</th>
@@ -208,8 +378,8 @@ const Users = () => {
                   <tbody>
                     {filteredData.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="text-center">
-                          No data found.
+                        <td colSpan="9" className="text-center py-4">
+                          No users found.
                         </td>
                       </tr>
                     ) : (
@@ -224,6 +394,7 @@ const Users = () => {
                                 className="rounded-circle"
                                 width="40"
                                 height="40"
+                                style={{ objectFit: "cover" }}
                               />
                             ) : (
                               <div className="bg-light rounded-circle d-flex align-items-center justify-content-center" style={{ width: "40px", height: "40px" }}>
@@ -251,7 +422,6 @@ const Users = () => {
                               minute: "2-digit",
                             })}
                           </td>
-
                           <td>
                             <span
                               className={`badge ${
@@ -259,28 +429,28 @@ const Users = () => {
                                   ? "bg-primary"
                                   : item.role === "admin"
                                   ? "bg-success"
-                                  : "bg-danger"
+                                  : "bg-info"
                               }`}
                             >
-                              {item.role.charAt(0).toUpperCase() +
-                                item.role.slice(1)}
+                              {item.role?.charAt(0).toUpperCase() + item.role?.slice(1) || "Student"}
                             </span>
                           </td>
                           <td>
                             <span
-                              className={`badge bg-${
-                                item.status === "Active" ? "success" : "danger"
+                              className={`badge ${
+                                item.status === "Active" ? "bg-success" : "bg-secondary"
                               }`}
                             >
                               {item.status || "Active"}
                             </span>
                           </td>
-                          <td className="d-flex justify-content-center">
-                            <div className="d-flex gap-2">
+                          <td className="text-center">
+                            <div className="d-flex gap-2 justify-content-center">
                               <Button
                                 color="primary"
                                 size="sm"
                                 onClick={() => handleView(item)}
+                                title="View"
                               >
                                 <i className="mdi mdi-eye"></i>
                               </Button>
@@ -288,6 +458,7 @@ const Users = () => {
                                 color="warning"
                                 size="sm"
                                 onClick={() => handleEdit(item)}
+                                title="Edit"
                               >
                                 <i className="mdi mdi-pencil"></i>
                               </Button>
@@ -295,6 +466,7 @@ const Users = () => {
                                 color="danger"
                                 size="sm"
                                 onClick={() => handleDelete(item._id)}
+                                title="Delete"
                               >
                                 <i className="mdi mdi-delete"></i>
                               </Button>
@@ -317,28 +489,34 @@ const Users = () => {
         toggle={() => setViewModalOpen(!viewModalOpen)}
       >
         <ModalHeader toggle={() => setViewModalOpen(!viewModalOpen)}>
-          Instructor Profile
+          User Profile
         </ModalHeader>
         <ModalBody>
-          {selectedInstructor && (
+          {selectedUser && (
             <div className="text-center">
               <img
-                src={userAvatar}
-                alt="Instructor"
+                src={selectedUser.image || userAvatar}
+                alt="User"
                 className="rounded-circle mb-3"
                 width={120}
                 height={120}
+                style={{ objectFit: "cover" }}
               />
-              <h5>{selectedInstructor.name}</h5>
-              <p>{selectedInstructor.email}</p>
-              <p>Role: {selectedInstructor.role}</p>
-              <span
-                className={`badge bg-${
-                  selectedInstructor.status === "Active" ? "success" : "danger"
-                }`}
-              >
-                {selectedInstructor.status || "Active"}
-              </span>
+              <h5>{selectedUser.name}</h5>
+              <p className="text-muted">{selectedUser.email}</p>
+              <p>
+                <strong>Role:</strong> {selectedUser.role}
+              </p>
+              <p>
+                <strong>Status:</strong>{" "}
+                <span
+                  className={`badge ${
+                    selectedUser.status === "Active" ? "bg-success" : "bg-secondary"
+                  }`}
+                >
+                  {selectedUser.status || "Active"}
+                </span>
+              </p>
             </div>
           )}
         </ModalBody>
@@ -355,13 +533,14 @@ const Users = () => {
         toggle={() => setEditModalOpen(!editModalOpen)}
       >
         <ModalHeader toggle={() => setEditModalOpen(!editModalOpen)}>
-          Edit Instructor
+          Edit User
         </ModalHeader>
         <ModalBody>
           <Form>
             <FormGroup>
-              <Label>Name</Label>
+              <Label for="editName">Name</Label>
               <Input
+                id="editName"
                 type="text"
                 name="name"
                 value={formData.name}
@@ -369,8 +548,9 @@ const Users = () => {
               />
             </FormGroup>
             <FormGroup>
-              <Label>Email</Label>
+              <Label for="editEmail">Email</Label>
               <Input
+                id="editEmail"
                 type="email"
                 name="email"
                 value={formData.email}
@@ -378,8 +558,9 @@ const Users = () => {
               />
             </FormGroup>
             <FormGroup>
-              <Label>Role</Label>
+              <Label for="editRole">Role</Label>
               <Input
+                id="editRole"
                 type="select"
                 name="role"
                 value={formData.role}
@@ -390,24 +571,12 @@ const Users = () => {
                 <option value="admin">Admin</option>
               </Input>
             </FormGroup>
-            <FormGroup>
-              <Label>Status</Label>
-              <Input
-                type="select"
-                name="status"
-                value={formData.status}
-                onChange={handleFormChange}
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </Input>
-            </FormGroup>
           </Form>
         </ModalBody>
         <ModalFooter>
           <Button
             color="success"
-            onClick={() => handleUpdate(selectedInstructor._id)}
+            onClick={() => handleUpdate(selectedUser?._id)}
           >
             Save Changes
           </Button>

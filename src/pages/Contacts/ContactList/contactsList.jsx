@@ -549,9 +549,9 @@ const ContactsList = () => {
             <div className="alert alert-success alert-dismissible fade show mb-3" role="alert">
               <i className="mdi mdi-check-circle-outline me-2"></i>
               {successMessage}
-              <button 
-                type="button" 
-                className="btn-close" 
+              <button
+                type="button"
+                className="btn-close"
                 onClick={() => setSuccessMessage("")}
                 aria-label="Close"
               ></button>
@@ -563,9 +563,9 @@ const ContactsList = () => {
             <div className="alert alert-danger alert-dismissible fade show mb-3" role="alert">
               <i className="mdi mdi-alert-circle-outline me-2"></i>
               {error}
-              <button 
-                type="button" 
-                className="btn-close" 
+              <button
+                type="button"
+                className="btn-close"
                 onClick={() => setError(null)}
                 aria-label="Close"
               ></button>
@@ -755,9 +755,10 @@ const ContactsList = () => {
 
                       <Row>
                         <Col md={12}>
-                          <div className="mb-3">
-                            <Label htmlFor="status">Update Status *</Label>
+                          <div className="mb-3 flex-column">
+                            <Label htmlFor="status">Update Status *</Label> <br />
                             <Input
+                              className="w-50"
                               type="select"
                               id="status"
                               name="status"

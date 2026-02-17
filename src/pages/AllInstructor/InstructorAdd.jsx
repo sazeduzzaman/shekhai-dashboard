@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Breadcrumbs from "../../components/Common/Breadcrumb";
@@ -54,7 +54,7 @@ const InstructorAdd = () => {
           toast.success("Instructor account created successfully! 🎉");
           resetForm();
           setTimeout(() => {
-            navigate("/instructors"); // Redirect back to instructor list
+            navigate("/all-instructors"); // Redirect back to instructor list
           }, 2000);
         } else {
           toast.error(data.message || "Registration failed");
@@ -85,12 +85,13 @@ const InstructorAdd = () => {
                   </div>
                   <h5 className="mb-0">Instructor Registration</h5>
                 </div>
-                <button
+                <Link
+                  to="/all-instructors"
                   className="btn btn-outline-secondary btn-sm d-flex align-items-center"
-                  onClick={() => navigate(-1)}
                 >
                   <ArrowLeft className="me-1" /> Back
-                </button>
+                </Link>
+
               </div>
 
               <div className="card-body p-4">
@@ -104,12 +105,12 @@ const InstructorAdd = () => {
                       <input
                         type="text"
                         name="name"
+                        autoComplete="off"
                         placeholder="e.g. John Doe"
-                        className={`form-control ${
-                          formik.touched.name && formik.errors.name
-                            ? "is-invalid"
-                            : ""
-                        }`}
+                        className={`form-control ${formik.touched.name && formik.errors.name
+                          ? "is-invalid"
+                          : ""
+                          }`}
                         {...formik.getFieldProps("name")}
                       />
                       {formik.touched.name && formik.errors.name && (
@@ -127,12 +128,12 @@ const InstructorAdd = () => {
                       <input
                         type="email"
                         name="email"
+                        autoComplete="off"
                         placeholder="instructor@example.com"
-                        className={`form-control ${
-                          formik.touched.email && formik.errors.email
-                            ? "is-invalid"
-                            : ""
-                        }`}
+                        className={`form-control ${formik.touched.email && formik.errors.email
+                          ? "is-invalid"
+                          : ""
+                          }`}
                         {...formik.getFieldProps("email")}
                       />
                       {formik.touched.email && formik.errors.email && (
@@ -150,11 +151,11 @@ const InstructorAdd = () => {
                           type={showPassword ? "text" : "password"}
                           name="password"
                           placeholder="••••••••"
-                          className={`form-control ${
-                            formik.touched.password && formik.errors.password
-                              ? "is-invalid"
-                              : ""
-                          }`}
+                          autoComplete="off"
+                          className={`form-control ${formik.touched.password && formik.errors.password
+                            ? "is-invalid"
+                            : ""
+                            }`}
                           {...formik.getFieldProps("password")}
                         />
                         <button
@@ -185,6 +186,7 @@ const InstructorAdd = () => {
                         type="text"
                         className="form-control bg-light"
                         value="Instructor"
+                        autoComplete="off"
                         disabled
                       />
                       <small className="text-muted">

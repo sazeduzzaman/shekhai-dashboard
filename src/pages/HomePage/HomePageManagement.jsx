@@ -498,7 +498,7 @@ const ImageUploadField = memo(({
             
             {value && (
               <>
-                <button
+                {/* <button
                   type="button"
                   onClick={() => {
                     const url = value.startsWith('http') ? value : value;
@@ -509,7 +509,7 @@ const ImageUploadField = memo(({
                   disabled={!value}
                 >
                   <Eye className="h-4 w-4" />
-                </button>
+                </button> */}
                 
                 <button
                   type="button"

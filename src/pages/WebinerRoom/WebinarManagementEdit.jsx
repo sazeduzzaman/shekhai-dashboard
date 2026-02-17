@@ -23,7 +23,7 @@ const API_BASE_URL = "https://shekhai-server.onrender.com/api/v1";
 const WebinarManagementEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
     title: "",
     badge: "webinar",
@@ -39,6 +39,7 @@ const WebinarManagementEdit = () => {
     isFeatured: false,
     status: "draft",
     maxParticipants: 100,
+    instructorId: "", // Store selected instructor ID
     instructorName: "",
     instructorTitle: "",
     tags: "",
@@ -47,6 +48,8 @@ const WebinarManagementEdit = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
+  const [instructors, setInstructors] = useState([]);
+  const [loadingInstructors, setLoadingInstructors] = useState(false);
   const [imagePreviews, setImagePreviews] = useState({
     thumbnail: null,
     bannerImage: null,
@@ -68,6 +71,113 @@ const WebinarManagementEdit = () => {
     });
   };
 
+  // Fetch all instructors for dropdown
+  const fetchInstructors = async () => {
+    setLoadingInstructors(true);
+    try {
+      // Get auth token from localStorage
+      const authData = JSON.parse(localStorage.getItem("authUser"));
+      const token = authData?.token;
+
+      if (!token) {
+        console.warn("No auth token found");
+        toast.warning("Authentication required to load instructors");
+        setLoadingInstructors(false);
+        return;
+      }
+
+      // Fetch users with role 'instructor' using authenticated endpoint
+      const response = await fetch(`${API_BASE_URL}/users?role=instructor`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Instructors API Response:", result);
+
+      if (result.success) {
+        // Check different possible response structures
+        let instructorList = [];
+
+        if (result.data && Array.isArray(result.data)) {
+          // If data is directly an array
+          instructorList = result.data;
+        } else if (result.users && Array.isArray(result.users)) {
+          // If users array exists
+          instructorList = result.users;
+        } else if (result.instructors && Array.isArray(result.instructors)) {
+          // If instructors array exists
+          instructorList = result.instructors;
+        } else if (Array.isArray(result)) {
+          // If result itself is an array
+          instructorList = result;
+        }
+
+        // Filter to ensure we only have instructors (role might be 'instructor')
+        instructorList = instructorList.filter(
+          user => user.role === 'instructor' || user.role === 'instructor'
+        );
+
+        setInstructors(instructorList);
+        console.log("Processed instructors list:", instructorList);
+
+        if (instructorList.length === 0) {
+          toast.info("No instructors found. Please create instructors first.");
+        }
+      } else {
+        console.warn("API returned success: false");
+        // Try public endpoint as fallback
+        await fetchPublicInstructors();
+      }
+    } catch (error) {
+      console.error("Error fetching instructors:", error);
+      // Try public endpoint as fallback
+      await fetchPublicInstructors();
+    } finally {
+      setLoadingInstructors(false);
+    }
+  };
+
+  // Public endpoint as fallback
+  const fetchPublicInstructors = async () => {
+    try {
+      // Try public endpoint without auth
+      const publicResponse = await fetch(`${API_BASE_URL}/users/instructors/public`);
+
+      if (publicResponse.ok) {
+        const publicResult = await publicResponse.json();
+        console.log("Public instructors API Response:", publicResult);
+
+        let instructorList = [];
+        if (publicResult.success) {
+          instructorList = publicResult.data || publicResult.users || publicResult.instructors || [];
+        } else if (Array.isArray(publicResult)) {
+          instructorList = publicResult;
+        }
+
+        // Filter to ensure we only have instructors
+        instructorList = instructorList.filter(
+          user => user.role === 'instructor' || user.role === 'instructor'
+        );
+
+        setInstructors(instructorList);
+
+        if (instructorList.length === 0) {
+          toast.info("No instructors found.");
+        }
+      }
+    } catch (publicError) {
+      console.error("Public fetch also failed:", publicError);
+      toast.error("Failed to load instructors. Please try again.");
+    }
+  };
+
   // Fetch webinar data for editing
   useEffect(() => {
     const fetchWebinar = async () => {
@@ -76,7 +186,7 @@ const WebinarManagementEdit = () => {
 
       try {
         const response = await fetch(`${API_BASE_URL}/webinars/${id}`);
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -86,7 +196,7 @@ const WebinarManagementEdit = () => {
 
         if (result.success) {
           const webinar = result.data;
-          
+
           // Store existing image URLs
           setExistingImages({
             thumbnail: webinar.thumbnail || "",
@@ -110,6 +220,7 @@ const WebinarManagementEdit = () => {
             isFeatured: webinar.isFeatured || false,
             status: webinar.status || "draft",
             maxParticipants: webinar.maxParticipants || 100,
+            instructorId: webinar.instructor?._id || "", // Store instructor ID
             instructorName: webinar.instructor?.name || "",
             instructorTitle: webinar.instructor?.title || "",
             tags: webinar.tags?.join(", ") || "",
@@ -121,6 +232,9 @@ const WebinarManagementEdit = () => {
             bannerImage: webinar.bannerImage || null,
             instructorAvatar: webinar.instructor?.avatar || null
           });
+
+          // Fetch instructors after loading webinar data
+          await fetchInstructors();
         } else {
           throw new Error(result.message || "Failed to load webinar");
         }
@@ -135,6 +249,10 @@ const WebinarManagementEdit = () => {
 
     if (id) {
       fetchWebinar();
+    } else {
+      // If no ID (creating new), just fetch instructors
+      fetchInstructors();
+      setLoading(false);
     }
   }, [id]);
 
@@ -147,11 +265,50 @@ const WebinarManagementEdit = () => {
     });
   };
 
+  // Handle instructor selection change
+  const handleInstructorChange = (e) => {
+    const selectedInstructorId = e.target.value;
+    const selectedInstructor = instructors.find(
+      (instructor) => instructor._id === selectedInstructorId
+    );
+
+    if (selectedInstructor) {
+      setFormData({
+        ...formData,
+        instructorId: selectedInstructorId,
+        instructorName: selectedInstructor.name || "",
+        instructorTitle: selectedInstructor.title || selectedInstructor.role || "Instructor",
+        // Update instructor avatar preview if available
+        instructorAvatar: null, // Clear any new file selection
+      });
+
+      // Update avatar preview with existing instructor avatar if available
+      if (selectedInstructor.avatar) {
+        setImagePreviews({
+          ...imagePreviews,
+          instructorAvatar: selectedInstructor.avatar
+        });
+        setExistingImages(prev => ({
+          ...prev,
+          instructorAvatar: selectedInstructor.avatar
+        }));
+      }
+    } else {
+      // Clear instructor fields if "Select Instructor" is chosen
+      setFormData({
+        ...formData,
+        instructorId: "",
+        instructorName: "",
+        instructorTitle: "",
+      });
+    }
+  };
+
   // Handle file input change
   const handleFileChange = (e) => {
     const { name, files } = e.target;
     const file = files[0];
-    
+
     if (file) {
       // Update form data with file
       setFormData({
@@ -174,12 +331,12 @@ const WebinarManagementEdit = () => {
       ...formData,
       [fieldName]: null
     });
-    
+
     // Revoke the object URL to avoid memory leaks
     if (imagePreviews[fieldName] && imagePreviews[fieldName].startsWith('blob:')) {
       URL.revokeObjectURL(imagePreviews[fieldName]);
     }
-    
+
     // Restore existing image or clear
     setImagePreviews({
       ...imagePreviews,
@@ -194,6 +351,11 @@ const WebinarManagementEdit = () => {
     setError(null);
 
     try {
+      // Validate instructor selection
+      if (!formData.instructorId) {
+        throw new Error("Please select an instructor");
+      }
+
       // Convert files to base64 if new files are selected
       let thumbnailBase64 = existingImages.thumbnail;
       let bannerImageBase64 = existingImages.bannerImage;
@@ -208,6 +370,11 @@ const WebinarManagementEdit = () => {
       if (formData.instructorAvatar) {
         instructorAvatarBase64 = await convertToBase64(formData.instructorAvatar);
       }
+
+      // Get selected instructor details
+      const selectedInstructor = instructors.find(
+        (inst) => inst._id === formData.instructorId
+      );
 
       // Prepare webinar data for API
       const webinarData = {
@@ -225,8 +392,9 @@ const WebinarManagementEdit = () => {
         status: formData.status,
         maxParticipants: Number(formData.maxParticipants),
         instructor: {
-          name: formData.instructorName,
-          title: formData.instructorTitle,
+          _id: formData.instructorId,
+          name: selectedInstructor?.name || formData.instructorName,
+          title: selectedInstructor?.title || formData.instructorTitle || selectedInstructor?.role,
           avatar: instructorAvatarBase64
         },
         tags: formData.tags
@@ -419,6 +587,64 @@ const WebinarManagementEdit = () => {
                       rows="5"
                       placeholder="Detailed description (shown on webinar page)"
                       value={formData.longDescription}
+                      onChange={handleInputChange}
+                      required
+                      disabled={updating}
+                    />
+                  </FormGroup>
+                </Col>
+
+                <Col lg={12}>
+                  <div className="mb-4 mt-4">
+                    <h5 className="card-title">Instructor Information</h5>
+                    <hr />
+                  </div>
+                </Col>
+
+                <Col lg={6}>
+                  <FormGroup>
+                    <Label htmlFor="instructorId" className="form-label">
+                      Select Instructor *
+                    </Label>
+                    <Input
+                      type="select"
+                      id="instructorId"
+                      name="instructorId"
+                      value={formData.instructorId}
+                      onChange={handleInstructorChange}
+                      required
+                      disabled={updating || loadingInstructors}
+                    >
+                      <option value="">-- Select an Instructor --</option>
+                      {loadingInstructors ? (
+                        <option value="" disabled>Loading instructors...</option>
+                      ) : (
+                        instructors.map((instructor) => (
+                          <option key={instructor._id} value={instructor._id}>
+                            {instructor.name} {instructor.email ? `(${instructor.email})` : ''}
+                          </option>
+                        ))
+                      )}
+                    </Input>
+                    {instructors.length === 0 && !loadingInstructors && (
+                      <small className="text-danger d-block mt-1">
+                        No instructors found. Please add instructors first.
+                      </small>
+                    )}
+                  </FormGroup>
+                </Col>
+
+                <Col lg={6}>
+                  <FormGroup>
+                    <Label htmlFor="instructorTitle" className="form-label">
+                      Instructor Title *
+                    </Label>
+                    <Input
+                      id="instructorTitle"
+                      name="instructorTitle"
+                      type="text"
+                      placeholder="e.g., Senior Developer, CEO, Expert"
+                      value={formData.instructorTitle}
                       onChange={handleInputChange}
                       required
                       disabled={updating}
@@ -649,11 +875,12 @@ const WebinarManagementEdit = () => {
                             src={imagePreviews.instructorAvatar}
                             alt="Avatar preview"
                             className="mb-2 rounded-circle"
-                            style={{ 
-                              maxHeight: "150px", 
+                            style={{
+                              maxHeight: "150px",
                               objectFit: "cover",
                               width: "150px",
-                              height: "150px"
+                              height: "150px",
+                              margin: "0 auto"
                             }}
                           />
                           <div className="small text-muted mb-2">
@@ -715,49 +942,6 @@ const WebinarManagementEdit = () => {
 
                 <Col lg={12}>
                   <div className="mb-4 mt-4">
-                    <h5 className="card-title">Instructor Information</h5>
-                    <hr />
-                  </div>
-                </Col>
-
-                <Col lg={6}>
-                  <FormGroup>
-                    <Label htmlFor="instructorName" className="form-label">
-                      Instructor Name *
-                    </Label>
-                    <Input
-                      id="instructorName"
-                      name="instructorName"
-                      type="text"
-                      placeholder="Enter instructor's full name"
-                      value={formData.instructorName}
-                      onChange={handleInputChange}
-                      required
-                      disabled={updating}
-                    />
-                  </FormGroup>
-                </Col>
-
-                <Col lg={6}>
-                  <FormGroup>
-                    <Label htmlFor="instructorTitle" className="form-label">
-                      Instructor Title *
-                    </Label>
-                    <Input
-                      id="instructorTitle"
-                      name="instructorTitle"
-                      type="text"
-                      placeholder="e.g., Senior Developer, CEO, Expert"
-                      value={formData.instructorTitle}
-                      onChange={handleInputChange}
-                      required
-                      disabled={updating}
-                    />
-                  </FormGroup>
-                </Col>
-
-                <Col lg={12}>
-                  <div className="mb-4 mt-4">
                     <h5 className="card-title">Additional Settings</h5>
                     <hr />
                   </div>
@@ -769,6 +953,7 @@ const WebinarManagementEdit = () => {
                       Status
                     </Label>
                     <Input
+                      className="w-50"
                       type="select"
                       id="status"
                       name="status"
@@ -850,7 +1035,7 @@ const WebinarManagementEdit = () => {
                       <Button
                         type="submit"
                         color="primary"
-                        disabled={updating}
+                        disabled={updating || !formData.instructorId || instructors.length === 0}
                       >
                         {updating ? (
                           <>

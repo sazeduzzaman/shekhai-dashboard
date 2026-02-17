@@ -180,11 +180,10 @@ const AllInstructor = () => {
                             <td>{item.email}</td>
                             <td>
                               <span
-                                className={`badge rounded-pill ${
-                                  item.status === "Active"
+                                className={`badge rounded-pill ${item.status === "Active"
                                     ? "bg-success-subtle text-success"
                                     : "bg-danger-subtle text-danger"
-                                }`}
+                                  }`}
                               >
                                 {item.status || "Active"}
                               </span>
