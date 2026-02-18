@@ -4,7 +4,7 @@ import { Book, Calendar, Eye, PersonStanding, Trash } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
-const API_BASE_URL = "http://localhost:8080/api/v1";
+const API_BASE_URL = "https://shekhai-server.onrender.com/api/v1";
 
 const StudyBitAdmin = () => {
     const [studyBits, setStudyBits] = useState([]);
