@@ -204,7 +204,7 @@ const ImageUploadField = memo(
                   )}
                 </button>
               </div>
-              {value && (
+              {/* {value && (
                 <button
                   type="button"
                   onClick={() => {
@@ -223,7 +223,7 @@ const ImageUploadField = memo(
                 >
                   <Eye className="h-4 w-4" />
                 </button>
-              )}
+              )} */}
             </div>
             <small className="text-muted d-block mt-2">
               Supported: JPG, PNG, GIF, WebP • Max: 5MB

@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import React, { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import SimpleBar from "simplebar-react";
 import MetisMenu from "metismenujs";
 import { Link, useLocation } from "react-router-dom";
@@ -22,7 +22,7 @@ import {
   Bell,
   User,
 } from "react-feather";
-import { BookAlert, DollarSignIcon, LucideBookOpen, Repeat1, Sliders, SunsetIcon, Users2 } from "lucide-react";
+import { BookAlert, DollarSignIcon, Repeat1, Sliders, SunsetIcon, Users2 } from "lucide-react";
 
 const SidebarContent = ({ t }) => {
   const ref = useRef();
@@ -387,7 +387,7 @@ const SidebarContent = ({ t }) => {
                   {t("Study Bit")}
                 </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link to="/#" className="has-arrow">
                   <DollarSign size={18} className="align-middle me-2" />
                   <span>{t("Finance")}</span>
@@ -406,7 +406,7 @@ const SidebarContent = ({ t }) => {
                     <Link to="/admin/invoices">{t("Invoices")}</Link>
                   </li>
                 </ul>
-              </li>
+              </li> */}
 
             </>
           )}
