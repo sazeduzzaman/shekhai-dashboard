@@ -1,6 +1,6 @@
 "use client";
 
-import { Book, Calendar, Eye, PersonStanding, Trash } from 'lucide-react';
+import { Book, Calendar, Eye, PersonStanding, Trash, X } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
@@ -18,6 +18,10 @@ const StudyBitAdmin = () => {
     const [stats, setStats] = useState(null);
     const [filterArea, setFilterArea] = useState('all');
     const [dateRange, setDateRange] = useState('all');
+
+    // Modal state
+    const [showModal, setShowModal] = useState(false);
+    const [selectedStudyBit, setSelectedStudyBit] = useState(null);
 
     const itemsPerPage = 10;
 
@@ -57,6 +61,12 @@ const StudyBitAdmin = () => {
         } catch (error) {
             console.error('Error fetching stats:', error);
         }
+    };
+
+    // View details function
+    const handleViewDetails = (item) => {
+        setSelectedStudyBit(item);
+        setShowModal(true);
     };
 
     const handleDelete = async (id) => {
@@ -129,7 +139,7 @@ const StudyBitAdmin = () => {
         const csvData = filteredData.map(item => [
             item.posterInfo.name,
             item.posterInfo.email,
-            item.posterInfo.phone,
+            `="${item.posterInfo.phone}"`,
             item.step1.interestedArea,
             item.step2.skillLevel,
             item.step2.learningGoal,
@@ -139,12 +149,14 @@ const StudyBitAdmin = () => {
             new Date(item.createdAt).toLocaleDateString()
         ]);
 
-        const csv = [headers, ...csvData].map(row => row.join(',')).join('\n');
+        const instructions = ['NOTE: If broken then Press (Ctrl + A) to select all & press (Alt + H + O + I) to AutoFit all columns"'];
+
+        const csv = [instructions, headers, ...csvData].map(row => row.join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
         a.download = `study-bit-export-${new Date().toISOString().split('T')[0]}.csv`;
+        a.href = url;
         a.click();
     };
 
@@ -175,6 +187,135 @@ const StudyBitAdmin = () => {
     });
 
     const uniqueAreas = [...new Set(studyBits.map(item => item.step1.interestedArea))];
+
+    // Details Modal Component
+    const DetailsModal = () => {
+        if (!selectedStudyBit) return null;
+
+        return (
+            <div
+                className={`modal fade ${showModal ? 'show d-block' : ''}`}
+                style={{
+                    backgroundColor: 'rgba(2, 6, 23, 0.6)', // Deeper, more modern backdrop
+                    backdropFilter: 'blur(16px)',
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+                onClick={() => setShowModal(false)}
+            >
+                <div className="modal-dialog modal-dialog-centered modal-lg" onClick={e => e.stopPropagation()}>
+                    <div className="modal-content border-0 shadow-2xl overflow-hidden"
+                        style={{
+                            borderRadius: '2.5rem',
+                            background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                        }}>
+
+                        {/* Header: Minimal & Integrated */}
+                        <div className="d-flex justify-content-between align-items-center p-4 px-md-5">
+                            <div className="d-flex align-items-center gap-2">
+                                <div className="bg-primary bg-gradient rounded-3 p-2 shadow-sm">
+                                    <i className="bi bi-mortarboard-fill text-white fs-5"></i>
+                                </div>
+                                <span className="fw-black text-dark fs-4 tracking-tight">Study<span className="text-primary">Bit</span></span>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn-close bg-light rounded-circle p-3 shadow-sm border-0"
+                                onClick={() => setShowModal(false)}
+                                style={{ transition: 'transform 0.2s' }}
+                            ></button>
+                        </div>
+
+                        <div className="modal-body p-4 px-md-5 pt-0">
+
+                            {/* Section 1: Hero Profile Card */}
+                            <div className="bg-white rounded-4 p-4 shadow-sm border border-light mb-4 d-flex align-items-center">
+                                <div className="position-relative">
+                                    <div className="bg-primary bg-opacity-10 text-primary rounded-4 d-flex align-items-center justify-content-center fw-bold fs-2 shadow-sm"
+                                        style={{ width: '80px', height: '80px' }}>
+                                        {selectedStudyBit.posterInfo.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                    </div>
+                                    <span className="position-absolute bottom-0 end-0 bg-success border border-white border-3 rounded-circle" style={{ width: '18px', height: '18px' }}></span>
+                                </div>
+                                <div className="ms-4">
+                                    <h4 className="mb-1 fw-bold text-slate-900">{selectedStudyBit.posterInfo.name}</h4>
+                                    <div className="d-flex flex-wrap gap-3">
+                                        <span className="text-muted small"><i className="bi bi-envelope me-1"></i> {selectedStudyBit.posterInfo.email}</span>
+                                        <span className="text-muted small"><i className="bi bi-telephone me-1"></i> {selectedStudyBit.posterInfo.phone}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 2: Info Grid (Bento Style) */}
+                            <div className="row g-3 mb-4">
+                                {/* Interest Card */}
+                                <div className="col-md-7">
+                                    <div className="h-100 p-4 rounded-4 bg-primary text-white shadow-sm position-relative overflow-hidden">
+                                        <i className="bi bi-stars position-absolute end-0 bottom-0 m-n3 opacity-25" style={{ fontSize: '8rem' }}></i>
+                                        <h6 className="text-uppercase small fw-black opacity-75 mb-3 tracking-widest">Target Domain</h6>
+                                        <h3 className="fw-bold mb-1">{selectedStudyBit.step1.interestedArea}</h3>
+                                        {selectedStudyBit.step1.otherArea && <p className="small opacity-75 mb-0">Spec: {selectedStudyBit.step1.otherArea}</p>}
+                                    </div>
+                                </div>
+
+                                {/* Style Card */}
+                                <div className="col-md-5">
+                                    <div className="h-100 p-4 rounded-4 bg-white border border-light shadow-sm">
+                                        <h6 className="text-uppercase small fw-bold text-muted mb-3 tracking-widest">Preferences</h6>
+                                        <div className="d-grid gap-2">
+                                            <span className="badge bg-light text-dark border py-2 px-3 rounded-3 fw-medium text-start">
+                                                <i className="bi bi-clock-history me-2 text-primary"></i> {selectedStudyBit.step3.timeDedication}
+                                            </span>
+                                            <span className="badge bg-light text-dark border py-2 px-3 rounded-3 fw-medium text-start">
+                                                <i className="bi bi-person-workspace me-2 text-primary"></i> {selectedStudyBit.step3.learningStyle}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 3: The Learning Goal */}
+                            <div className="p-4 rounded-4 bg-white border border-light shadow-sm">
+                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 className="text-uppercase small fw-bold text-muted mb-0 tracking-widest">Learning Objective</h6>
+                                    <span className="badge rounded-pill bg-warning bg-opacity-10 text-warning px-3 py-2 border border-warning border-opacity-10">
+                                        {selectedStudyBit.step2.skillLevel} Level
+                                    </span>
+                                </div>
+                                <p className="fs-4 fw-semibold text-dark mb-0 lh-base">
+                                    "{selectedStudyBit.step2.learningGoal}"
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Footer: Floating Style */}
+                        <div className="p-4 px-md-5 bg-light bg-opacity-50 border-top d-flex flex-wrap align-items-center justify-content-between gap-3">
+                            <div className="d-flex gap-3">
+                                <div className="bg-white px-3 py-2 rounded-3 border shadow-xs small">
+                                    <i className="bi bi-calendar3 text-primary me-2"></i>
+                                    {new Date(selectedStudyBit.createdAt).toLocaleDateString()}
+                                </div>
+                                <div className="bg-white px-3 py-2 rounded-3 border shadow-xs small">
+                                    <i className="bi bi-alarm text-primary me-2"></i>
+                                    {selectedStudyBit.finalStep.startTime}
+                                </div>
+                            </div>
+
+                            <div className="d-flex gap-2">
+                                <button className="btn btn-light rounded-pill px-4 fw-bold text-secondary" onClick={() => setShowModal(false)}>
+                                    Dismiss
+                                </button>
+                                <button className="btn btn-dark rounded-pill px-4 fw-bold shadow-sm"
+                                    onClick={() => window.confirm('Delete?') && handleDelete(selectedStudyBit._id)}>
+                                    Delete Record
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     if (loading && studyBits.length === 0) {
         return (
@@ -429,13 +570,22 @@ const StudyBitAdmin = () => {
                                                 {new Date(item.createdAt).toLocaleDateString()}
                                             </td>
                                             <td className="px-4">
-                                                <button
-                                                    onClick={() => handleDelete(item._id)}
-                                                    className="btn btn-link text-danger p-0"
-                                                    title="Delete"
-                                                >
-                                                    <Trash />
-                                                </button>
+                                                <div className="d-flex gap-2">
+                                                    <button
+                                                        onClick={() => handleViewDetails(item)}
+                                                        className="btn btn-link text-primary p-0"
+                                                        title="View Details"
+                                                    >
+                                                        <Eye size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(item._id)}
+                                                        className="btn btn-link text-danger p-0"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash size={18} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -467,12 +617,22 @@ const StudyBitAdmin = () => {
                                                     <i className="bi bi-telephone me-2"></i>{item.posterInfo.phone}
                                                 </p>
                                             </div>
-                                            <button
-                                                onClick={() => handleDelete(item._id)}
-                                                className="btn btn-link text-danger p-0"
-                                            >
-                                                <i className="bi bi-trash fs-5"></i>
-                                            </button>
+                                            <div className="d-flex gap-2">
+                                                <button
+                                                    onClick={() => handleViewDetails(item)}
+                                                    className="btn btn-link text-primary p-0"
+                                                    title="View Details"
+                                                >
+                                                    <Eye size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(item._id)}
+                                                    className="btn btn-link text-danger p-0"
+                                                    title="Delete"
+                                                >
+                                                    <Trash size={18} />
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <div className="border-top pt-3">
@@ -554,6 +714,9 @@ const StudyBitAdmin = () => {
                         </div>
                     </div>
                 )}
+
+                {/* Details Modal */}
+                <DetailsModal />
             </div>
         </div>
     );

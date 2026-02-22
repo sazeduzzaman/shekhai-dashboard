@@ -465,13 +465,13 @@ const LiveSessionPage = () => {
                         <td>
                           <div className="d-flex gap-2">
                             {/* View Details */}
-                            <Link
+                            {/* <Link
                               to={`/live-sessions/view/${session._id}`}
                               className="btn btn-sm btn-outline-primary"
                               title="View Details"
                             >
                               <Eye size={16} />
-                            </Link>
+                            </Link> */}
 
                             {/* Edit */}
                             <Link

@@ -8,7 +8,9 @@ const CreateLiveSessionPage = () => {
   const [loading, setLoading] = useState(false);
   const [instructors, setInstructors] = useState([]);
   const [categories, setCategories] = useState([]);
-  
+  const [fetchingInstructors, setFetchingInstructors] = useState(true);
+  const [fetchingCategories, setFetchingCategories] = useState(true);
+
   // Timezone options
   const timezones = [
     'UTC',
@@ -26,7 +28,7 @@ const CreateLiveSessionPage = () => {
   const levels = ['All Levels', 'Beginner', 'Intermediate', 'Advanced', 'Expert'];
 
   // Language options
-  const languages = ['English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Arabic', 'Hindi'];
+  const languages = ['English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Arabic', 'Hindi', 'Bengali'];
 
   // Platform options
   const platforms = [
@@ -85,127 +87,121 @@ const CreateLiveSessionPage = () => {
   });
 
   // Auth info
-  const authUser = JSON.parse(localStorage.getItem('authUser'));
+  const authUser = JSON.parse(localStorage.getItem('authUser') || '{}');
   const token = authUser?.token;
   const userRole = authUser?.user?.role;
   const userId = authUser?.user?._id;
 
-  // Fetch instructors
+  // Fetch instructors from public endpoint
   useEffect(() => {
     const fetchInstructors = async () => {
-      if (!token) {
-        console.log('No token available');
-        return;
-      }
+      setFetchingInstructors(true);
 
       try {
-        console.log('Fetching instructors...');
-        
-        // Try different API endpoints
-        const endpoints = [
-          'https://shekhai-server.onrender.com/api/v1/users?role=instructor',
-        ];
-        
-        let instructorsList = [];
-        
-        for (const endpoint of endpoints) {
-          try {
-            console.log('Trying endpoint:', endpoint);
-            const res = await fetch(endpoint, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            if (res.ok) {
-              const data = await res.json();
-              console.log('Response from', endpoint, ':', data);
-              
-              // Handle different response structures
-              if (data.success) {
-                if (data.users) {
-                  instructorsList = data.users;
-                } else if (data.data) {
-                  instructorsList = data.data;
-                }
-              } else if (Array.isArray(data)) {
-                instructorsList = data;
-              }
-              
-              // If we got data, break the loop
-              if (instructorsList.length > 0) {
-                break;
-              }
+        console.log('Fetching instructors from public endpoint...');
+
+        const res = await fetch('https://shekhai-server.onrender.com/api/v1/users/instructors/public');
+
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Instructors data received:', data);
+
+          // Handle the response based on the structure
+          let instructorsList = [];
+
+          if (data.success && data.instructors && Array.isArray(data.instructors)) {
+            // Your exact response structure: { success: true, count: 3, instructors: [...] }
+            instructorsList = data.instructors;
+            console.log('Extracted instructors list:', instructorsList);
+          } else if (Array.isArray(data)) {
+            instructorsList = data;
+          } else if (data.data && Array.isArray(data.data)) {
+            instructorsList = data.data;
+          } else if (data.users) {
+            instructorsList = data.users;
+          }
+
+          console.log('Final instructors list to set:', instructorsList);
+          setInstructors(instructorsList);
+
+          // If user is instructor, auto-select themselves
+          if (userRole === 'instructor' && userId) {
+            console.log('Auto-selecting instructor as self:', userId);
+
+            // Check if current user is in the instructors list
+            const currentUserInList = instructorsList.some(inst =>
+              inst._id === userId || inst.id === userId
+            );
+
+            if (currentUserInList) {
+              setFormData(prev => ({
+                ...prev,
+                instructor: userId
+              }));
+            } else {
+              // If current user is not in list but is instructor, add them
+              const currentUser = {
+                _id: userId,
+                name: authUser?.user?.name || authUser?.user?.username || 'You',
+                email: authUser?.user?.email,
+                role: 'instructor'
+              };
+              setInstructors(prev => [...prev, currentUser]);
+              setFormData(prev => ({
+                ...prev,
+                instructor: userId
+              }));
             }
-          } catch (err) {
-            console.log('Failed for endpoint', endpoint, ':', err.message);
           }
-        }
-        
-        // Filter by role if we fetched all users
-        if (instructorsList.length > 0) {
-          instructorsList = instructorsList.filter(user => user.role === 'instructor');
-        }
-        
-        console.log('Final instructors list:', instructorsList);
-        setInstructors(instructorsList);
-        
-        // If user is instructor, auto-select themselves
-        if (userRole === 'instructor' && userId) {
-          console.log('Auto-selecting instructor as self:', userId);
-          setFormData(prev => ({
-            ...prev,
-            instructor: userId
-          }));
-          
-          // Also add themselves to instructors list if not already there
-          const selfAsInstructor = {
-            _id: userId,
-            name: authUser.user.name || authUser.user.username,
-            email: authUser.user.email,
-            role: 'instructor'
-          };
-          
-          if (!instructorsList.some(instructor => instructor._id === userId)) {
-            setInstructors(prev => [...prev, selfAsInstructor]);
-          }
+        } else {
+          console.log('Failed to fetch instructors:', res.status);
+          toast.error('Failed to load instructors');
         }
       } catch (error) {
         console.error('Error fetching instructors:', error);
+        toast.error('Error loading instructors');
+      } finally {
+        setFetchingInstructors(false);
       }
     };
 
     fetchInstructors();
-  }, [token, userRole, userId, authUser]);
+  }, [userRole, userId, authUser]);
 
   // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
-      if (!token) return;
-      
+      setFetchingCategories(true);
+
       try {
-        const res = await fetch('https://shekhai-server.onrender.com/api/v1/categories', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
+        const res = await fetch('https://shekhai-server.onrender.com/api/v1/categories');
+
         if (res.ok) {
           const data = await res.json();
-          if (data.success) {
-            const categoriesList = data.categories || data.data || [];
-            setCategories(categoriesList);
+          console.log('Categories response:', data);
+
+          let categoriesList = [];
+
+          if (data.success && data.categories && Array.isArray(data.categories)) {
+            categoriesList = data.categories;
+          } else if (data.data && Array.isArray(data.data)) {
+            categoriesList = data.data;
+          } else if (Array.isArray(data)) {
+            categoriesList = data;
           }
+
+          setCategories(categoriesList);
         }
       } catch (error) {
         console.error('Error fetching categories:', error);
+        toast.error('Failed to load categories');
+      } finally {
+        setFetchingCategories(false);
       }
     };
 
     fetchCategories();
-  }, [token]);
+  }, []);
 
   // Handle array field changes (prerequisites, whatYoullGet)
   const handleArrayFieldChange = (fieldName, index, value) => {
@@ -215,9 +211,9 @@ const CreateLiveSessionPage = () => {
   };
 
   const addArrayField = (fieldName) => {
-    setFormData(prev => ({ 
-      ...prev, 
-      [fieldName]: [...prev[fieldName], ''] 
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: [...prev[fieldName], '']
     }));
   };
 
@@ -234,33 +230,33 @@ const CreateLiveSessionPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validation
     if (!formData.title.trim()) {
       toast.error('Title is required');
       return;
     }
-    
+
     if (!formData.description.trim()) {
       toast.error('Description is required');
       return;
     }
-    
+
     if (!formData.instructor) {
       toast.error('Instructor is required');
       return;
     }
-    
+
     if (!formData.category) {
       toast.error('Category is required');
       return;
     }
-    
+
     if (!formData.schedule.startTime || !formData.schedule.endTime) {
       toast.error('Start time and end time are required');
       return;
     }
-    
+
     setLoading(true);
 
     try {
@@ -281,7 +277,7 @@ const CreateLiveSessionPage = () => {
           duration,
           startTime: new Date(formData.schedule.startTime).toISOString(),
           endTime: new Date(formData.schedule.endTime).toISOString(),
-          enrollmentDeadline: formData.enrollmentDeadline 
+          enrollmentDeadline: formData.enrollmentDeadline
             ? new Date(formData.enrollmentDeadline).toISOString()
             : null
         },
@@ -303,7 +299,7 @@ const CreateLiveSessionPage = () => {
       });
 
       const data = await res.json();
-      
+
       if (data.success) {
         toast.success('Live session created successfully!');
         navigate('/live-sessions');
@@ -322,13 +318,13 @@ const CreateLiveSessionPage = () => {
     <div className="page-content">
       <div className="container-fluid">
         <Breadcrumbs title="Live Sessions" breadcrumbItem="Create Live Session" />
-        
+
         <div className="row">
           <div className="col-lg-12">
             <div className="card">
               <div className="card-body">
                 <h4 className="card-title mb-4">Create New Live Session</h4>
-                
+
                 <form onSubmit={handleSubmit}>
                   {/* Basic Information */}
                   <div className="card border mb-4">
@@ -343,21 +339,24 @@ const CreateLiveSessionPage = () => {
                             type="text"
                             className="form-control"
                             value={formData.title}
-                            onChange={(e) => setFormData({...formData, title: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             required
                             placeholder="Enter session title"
                           />
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <label className="form-label">Category *</label>
                           <select
                             className="form-select"
                             value={formData.category}
-                            onChange={(e) => setFormData({...formData, category: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                             required
+                            disabled={fetchingCategories}
                           >
-                            <option value="">Select Category</option>
+                            <option value="">
+                              {fetchingCategories ? 'Loading categories...' : 'Select Category'}
+                            </option>
                             {categories.map(category => (
                               <option key={category._id} value={category._id}>
                                 {category.name}
@@ -365,45 +364,47 @@ const CreateLiveSessionPage = () => {
                             ))}
                           </select>
                         </div>
-                        
+
+                        {/* Instructor Field */}
+                        {/* Instructor Field */}
                         {/* Instructor Field */}
                         <div className="col-md-6 mb-3">
                           <label className="form-label">Instructor *</label>
                           {userRole === 'instructor' ? (
-                            <>
-                              <input
-                                type="text"
-                                className="form-control"
-                                value={authUser?.user?.name || authUser?.user?.email || 'You'}
-                                disabled
-                              />
-                              <small className="text-muted">
-                                As an instructor, you are automatically assigned.
-                              </small>
-                            </>
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={authUser?.user?.name || authUser?.user?.email || 'You'}
+                              disabled
+                            />
                           ) : (
-                            <select
-                              className="form-select"
-                              value={formData.instructor}
-                              onChange={(e) => setFormData({...formData, instructor: e.target.value})}
-                              required
-                            >
-                              <option value="">Select Instructor</option>
-                              {instructors.map(instructor => (
-                                <option key={instructor._id} value={instructor._id}>
-                                  {instructor.name || instructor.username || instructor.email} ({instructor.email})
-                                </option>
-                              ))}
-                            </select>
+                            <>
+                              <select
+                                className="form-select"
+                                value={formData.instructor}
+                                onChange={(e) => setFormData({ ...formData, instructor: e.target.value })}
+                                required
+                              >
+                                <option value="">Select Instructor</option>
+                                {instructors.map(instructor => (
+                                  <option key={instructor._id} value={instructor._id}>
+                                    {instructor.name}
+                                  </option>
+                                ))}
+                              </select>
+                              {instructors.length === 0 && (
+                                <small className="text-muted">No instructors available</small>
+                              )}
+                            </>
                           )}
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <label className="form-label">Level</label>
                           <select
                             className="form-select"
                             value={formData.level}
-                            onChange={(e) => setFormData({...formData, level: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                           >
                             {levels.map(level => (
                               <option key={level} value={level}>
@@ -412,13 +413,13 @@ const CreateLiveSessionPage = () => {
                             ))}
                           </select>
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <label className="form-label">Language</label>
                           <select
                             className="form-select"
                             value={formData.language}
-                            onChange={(e) => setFormData({...formData, language: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, language: e.target.value })}
                           >
                             {languages.map(lang => (
                               <option key={lang} value={lang}>
@@ -427,7 +428,7 @@ const CreateLiveSessionPage = () => {
                             ))}
                           </select>
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <label className="form-label">Tags (comma separated)</label>
                           <input
@@ -439,14 +440,14 @@ const CreateLiveSessionPage = () => {
                           />
                           <small className="text-muted">Separate tags with commas</small>
                         </div>
-                        
+
                         <div className="col-md-12 mb-3">
                           <label className="form-label">Description *</label>
                           <textarea
                             className="form-control"
                             rows="4"
                             value={formData.description}
-                            onChange={(e) => setFormData({...formData, description: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             required
                             placeholder="Enter detailed description of the live session"
                           />
@@ -454,7 +455,7 @@ const CreateLiveSessionPage = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Schedule */}
                   <div className="card border mb-4">
                     <div className="card-header bg-light">
@@ -469,13 +470,13 @@ const CreateLiveSessionPage = () => {
                             className="form-control"
                             value={formData.schedule.startTime}
                             onChange={(e) => setFormData({
-                              ...formData, 
-                              schedule: {...formData.schedule, startTime: e.target.value}
+                              ...formData,
+                              schedule: { ...formData.schedule, startTime: e.target.value }
                             })}
                             required
                           />
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <label className="form-label">End Time *</label>
                           <input
@@ -483,13 +484,13 @@ const CreateLiveSessionPage = () => {
                             className="form-control"
                             value={formData.schedule.endTime}
                             onChange={(e) => setFormData({
-                              ...formData, 
-                              schedule: {...formData.schedule, endTime: e.target.value}
+                              ...formData,
+                              schedule: { ...formData.schedule, endTime: e.target.value }
                             })}
                             required
                           />
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <label className="form-label">Timezone</label>
                           <select
@@ -497,7 +498,7 @@ const CreateLiveSessionPage = () => {
                             value={formData.schedule.timezone}
                             onChange={(e) => setFormData({
                               ...formData,
-                              schedule: {...formData.schedule, timezone: e.target.value}
+                              schedule: { ...formData.schedule, timezone: e.target.value }
                             })}
                           >
                             {timezones.map(tz => (
@@ -505,18 +506,18 @@ const CreateLiveSessionPage = () => {
                             ))}
                           </select>
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <label className="form-label">Enrollment Deadline (Optional)</label>
                           <input
                             type="datetime-local"
                             className="form-control"
                             value={formData.enrollmentDeadline}
-                            onChange={(e) => setFormData({...formData, enrollmentDeadline: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, enrollmentDeadline: e.target.value })}
                           />
                           <small className="text-muted">Leave empty if no deadline</small>
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <div className="form-check">
                             <input
@@ -526,7 +527,7 @@ const CreateLiveSessionPage = () => {
                               checked={formData.schedule.recurring}
                               onChange={(e) => setFormData({
                                 ...formData,
-                                schedule: {...formData.schedule, recurring: e.target.checked}
+                                schedule: { ...formData.schedule, recurring: e.target.checked }
                               })}
                             />
                             <label className="form-check-label" htmlFor="recurring">
@@ -537,7 +538,7 @@ const CreateLiveSessionPage = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Live Session Details */}
                   <div className="card border mb-4">
                     <div className="card-header bg-light">
@@ -552,7 +553,7 @@ const CreateLiveSessionPage = () => {
                             value={formData.liveDetails.platform}
                             onChange={(e) => setFormData({
                               ...formData,
-                              liveDetails: {...formData.liveDetails, platform: e.target.value}
+                              liveDetails: { ...formData.liveDetails, platform: e.target.value }
                             })}
                           >
                             {platforms.map(platform => (
@@ -562,7 +563,7 @@ const CreateLiveSessionPage = () => {
                             ))}
                           </select>
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <label className="form-label">Meeting ID</label>
                           <input
@@ -571,12 +572,12 @@ const CreateLiveSessionPage = () => {
                             value={formData.liveDetails.meetingId}
                             onChange={(e) => setFormData({
                               ...formData,
-                              liveDetails: {...formData.liveDetails, meetingId: e.target.value}
+                              liveDetails: { ...formData.liveDetails, meetingId: e.target.value }
                             })}
                             placeholder="Enter meeting ID"
                           />
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <label className="form-label">Meeting Password</label>
                           <input
@@ -585,12 +586,12 @@ const CreateLiveSessionPage = () => {
                             value={formData.liveDetails.meetingPassword}
                             onChange={(e) => setFormData({
                               ...formData,
-                              liveDetails: {...formData.liveDetails, meetingPassword: e.target.value}
+                              liveDetails: { ...formData.liveDetails, meetingPassword: e.target.value }
                             })}
                             placeholder="Enter meeting password"
                           />
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <label className="form-label">Meeting URL</label>
                           <input
@@ -599,12 +600,12 @@ const CreateLiveSessionPage = () => {
                             value={formData.liveDetails.meetingUrl}
                             onChange={(e) => setFormData({
                               ...formData,
-                              liveDetails: {...formData.liveDetails, meetingUrl: e.target.value}
+                              liveDetails: { ...formData.liveDetails, meetingUrl: e.target.value }
                             })}
                             placeholder="https://zoom.us/j/123456789"
                           />
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <label className="form-label">Join URL</label>
                           <input
@@ -613,12 +614,12 @@ const CreateLiveSessionPage = () => {
                             value={formData.liveDetails.joinUrl}
                             onChange={(e) => setFormData({
                               ...formData,
-                              liveDetails: {...formData.liveDetails, joinUrl: e.target.value}
+                              liveDetails: { ...formData.liveDetails, joinUrl: e.target.value }
                             })}
                             placeholder="https://shekhai.com/live/session-name"
                           />
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <label className="form-label">Stream URL</label>
                           <input
@@ -627,12 +628,12 @@ const CreateLiveSessionPage = () => {
                             value={formData.liveDetails.streamUrl}
                             onChange={(e) => setFormData({
                               ...formData,
-                              liveDetails: {...formData.liveDetails, streamUrl: e.target.value}
+                              liveDetails: { ...formData.liveDetails, streamUrl: e.target.value }
                             })}
                             placeholder="https://stream.shekhai.com/live/session-name"
                           />
                         </div>
-                        
+
                         <div className="col-md-12">
                           <div className="row">
                             <div className="col-md-4">
@@ -644,7 +645,7 @@ const CreateLiveSessionPage = () => {
                                   checked={formData.liveDetails.chatEnabled}
                                   onChange={(e) => setFormData({
                                     ...formData,
-                                    liveDetails: {...formData.liveDetails, chatEnabled: e.target.checked}
+                                    liveDetails: { ...formData.liveDetails, chatEnabled: e.target.checked }
                                   })}
                                 />
                                 <label className="form-check-label" htmlFor="chatEnabled">
@@ -652,7 +653,7 @@ const CreateLiveSessionPage = () => {
                                 </label>
                               </div>
                             </div>
-                            
+
                             <div className="col-md-4">
                               <div className="form-check">
                                 <input
@@ -662,7 +663,7 @@ const CreateLiveSessionPage = () => {
                                   checked={formData.liveDetails.qaEnabled}
                                   onChange={(e) => setFormData({
                                     ...formData,
-                                    liveDetails: {...formData.liveDetails, qaEnabled: e.target.checked}
+                                    liveDetails: { ...formData.liveDetails, qaEnabled: e.target.checked }
                                   })}
                                 />
                                 <label className="form-check-label" htmlFor="qaEnabled">
@@ -670,7 +671,7 @@ const CreateLiveSessionPage = () => {
                                 </label>
                               </div>
                             </div>
-                            
+
                             <div className="col-md-4">
                               <div className="form-check">
                                 <input
@@ -680,7 +681,7 @@ const CreateLiveSessionPage = () => {
                                   checked={formData.liveDetails.pollsEnabled}
                                   onChange={(e) => setFormData({
                                     ...formData,
-                                    liveDetails: {...formData.liveDetails, pollsEnabled: e.target.checked}
+                                    liveDetails: { ...formData.liveDetails, pollsEnabled: e.target.checked }
                                   })}
                                 />
                                 <label className="form-check-label" htmlFor="pollsEnabled">
@@ -693,7 +694,7 @@ const CreateLiveSessionPage = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Enrollment & Slots */}
                   <div className="card border mb-4">
                     <div className="card-header bg-light">
@@ -707,11 +708,11 @@ const CreateLiveSessionPage = () => {
                             type="number"
                             className="form-control"
                             value={formData.totalSlots}
-                            onChange={(e) => setFormData({...formData, totalSlots: parseInt(e.target.value) || 0})}
+                            onChange={(e) => setFormData({ ...formData, totalSlots: parseInt(e.target.value) || 0 })}
                             min="1"
                           />
                         </div>
-                        
+
                         <div className="col-md-6 mb-3">
                           <div className="form-check">
                             <input
@@ -719,14 +720,14 @@ const CreateLiveSessionPage = () => {
                               className="form-check-input"
                               id="waitlistEnabled"
                               checked={formData.waitlistEnabled}
-                              onChange={(e) => setFormData({...formData, waitlistEnabled: e.target.checked})}
+                              onChange={(e) => setFormData({ ...formData, waitlistEnabled: e.target.checked })}
                             />
                             <label className="form-check-label" htmlFor="waitlistEnabled">
                               Enable Waitlist
                             </label>
                           </div>
                         </div>
-                        
+
                         {formData.waitlistEnabled && (
                           <div className="col-md-6 mb-3">
                             <label className="form-label">Max Waitlist Size</label>
@@ -734,7 +735,7 @@ const CreateLiveSessionPage = () => {
                               type="number"
                               className="form-control"
                               value={formData.maxWaitlist}
-                              onChange={(e) => setFormData({...formData, maxWaitlist: parseInt(e.target.value) || 0})}
+                              onChange={(e) => setFormData({ ...formData, maxWaitlist: parseInt(e.target.value) || 0 })}
                               min="1"
                             />
                           </div>
@@ -742,7 +743,7 @@ const CreateLiveSessionPage = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Pricing */}
                   <div className="card border mb-4">
                     <div className="card-header bg-light">
@@ -757,14 +758,14 @@ const CreateLiveSessionPage = () => {
                               className="form-check-input"
                               id="isPaid"
                               checked={formData.isPaid}
-                              onChange={(e) => setFormData({...formData, isPaid: e.target.checked})}
+                              onChange={(e) => setFormData({ ...formData, isPaid: e.target.checked })}
                             />
                             <label className="form-check-label" htmlFor="isPaid">
                               This is a paid session
                             </label>
                           </div>
                         </div>
-                        
+
                         {formData.isPaid && (
                           <>
                             <div className="col-md-6 mb-3">
@@ -773,31 +774,31 @@ const CreateLiveSessionPage = () => {
                                 type="number"
                                 className="form-control"
                                 value={formData.price}
-                                onChange={(e) => setFormData({...formData, price: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                                 min="0"
                                 step="0.01"
                               />
                             </div>
-                            
+
                             <div className="col-md-6 mb-3">
                               <label className="form-label">Discounted Price ($) (Optional)</label>
                               <input
                                 type="number"
                                 className="form-control"
                                 value={formData.discountedPrice}
-                                onChange={(e) => setFormData({...formData, discountedPrice: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, discountedPrice: e.target.value })}
                                 min="0"
                                 step="0.01"
                               />
                             </div>
-                            
+
                             <div className="col-md-6 mb-3">
                               <label className="form-label">Currency</label>
                               <input
                                 type="text"
                                 className="form-control"
                                 value={formData.currency}
-                                onChange={(e) => setFormData({...formData, currency: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                               />
                             </div>
                           </>
@@ -805,7 +806,7 @@ const CreateLiveSessionPage = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Prerequisites */}
                   <div className="card border mb-4">
                     <div className="card-header bg-light">
@@ -845,7 +846,7 @@ const CreateLiveSessionPage = () => {
                       </button>
                     </div>
                   </div>
-                  
+
                   {/* What You'll Get */}
                   <div className="card border mb-4">
                     <div className="card-header bg-light">
@@ -885,7 +886,7 @@ const CreateLiveSessionPage = () => {
                       </button>
                     </div>
                   </div>
-                  
+
                   {/* Recording Settings */}
                   <div className="card border mb-4">
                     <div className="card-header bg-light">
@@ -900,14 +901,14 @@ const CreateLiveSessionPage = () => {
                               className="form-check-input"
                               id="recordSession"
                               checked={formData.recordSession}
-                              onChange={(e) => setFormData({...formData, recordSession: e.target.checked})}
+                              onChange={(e) => setFormData({ ...formData, recordSession: e.target.checked })}
                             />
                             <label className="form-check-label" htmlFor="recordSession">
                               Record Session
                             </label>
                           </div>
                         </div>
-                        
+
                         {formData.recordSession && (
                           <>
                             <div className="col-md-6 mb-3">
@@ -917,25 +918,25 @@ const CreateLiveSessionPage = () => {
                                   className="form-check-input"
                                   id="autoPublishRecording"
                                   checked={formData.autoPublishRecording}
-                                  onChange={(e) => setFormData({...formData, autoPublishRecording: e.target.checked})}
+                                  onChange={(e) => setFormData({ ...formData, autoPublishRecording: e.target.checked })}
                                 />
                                 <label className="form-check-label" htmlFor="autoPublishRecording">
                                   Auto-publish Recording
                                 </label>
                               </div>
                             </div>
-                            
+
                             <div className="col-md-6 mb-3">
                               <label className="form-label">Recording Available For (days)</label>
                               <input
                                 type="number"
                                 className="form-control"
                                 value={formData.recordingAvailableFor}
-                                onChange={(e) => setFormData({...formData, recordingAvailableFor: parseInt(e.target.value) || 0})}
+                                onChange={(e) => setFormData({ ...formData, recordingAvailableFor: parseInt(e.target.value) || 0 })}
                                 min="1"
                               />
                             </div>
-                            
+
                             <div className="col-md-6 mb-3">
                               <div className="form-check">
                                 <input
@@ -943,7 +944,7 @@ const CreateLiveSessionPage = () => {
                                   className="form-check-input"
                                   id="recordingDownloadable"
                                   checked={formData.recordingDownloadable}
-                                  onChange={(e) => setFormData({...formData, recordingDownloadable: e.target.checked})}
+                                  onChange={(e) => setFormData({ ...formData, recordingDownloadable: e.target.checked })}
                                 />
                                 <label className="form-check-label" htmlFor="recordingDownloadable">
                                   Allow Recording Download
@@ -952,7 +953,7 @@ const CreateLiveSessionPage = () => {
                             </div>
                           </>
                         )}
-                        
+
                         <div className="col-md-6 mb-3">
                           <div className="form-check">
                             <input
@@ -960,7 +961,7 @@ const CreateLiveSessionPage = () => {
                               className="form-check-input"
                               id="sendReminders"
                               checked={formData.sendReminders}
-                              onChange={(e) => setFormData({...formData, sendReminders: e.target.checked})}
+                              onChange={(e) => setFormData({ ...formData, sendReminders: e.target.checked })}
                             />
                             <label className="form-check-label" htmlFor="sendReminders">
                               Send Reminders to Participants
@@ -970,7 +971,7 @@ const CreateLiveSessionPage = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Status */}
                   <div className="card border mb-4">
                     <div className="card-header bg-light">
@@ -985,7 +986,7 @@ const CreateLiveSessionPage = () => {
                               className="form-check-input"
                               id="isActive"
                               checked={formData.isActive}
-                              onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                             />
                             <label className="form-check-label" htmlFor="isActive">
                               Active Session
@@ -995,7 +996,7 @@ const CreateLiveSessionPage = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="d-flex justify-content-between mt-4">
                     <button
                       type="button"
@@ -1004,7 +1005,7 @@ const CreateLiveSessionPage = () => {
                     >
                       Cancel
                     </button>
-                    
+
                     <button
                       type="submit"
                       className="btn btn-primary"
