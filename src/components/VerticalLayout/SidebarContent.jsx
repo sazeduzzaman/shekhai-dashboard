@@ -387,6 +387,22 @@ const SidebarContent = ({ t }) => {
                   {t("Study Bit")}
                 </Link>
               </li>
+              <li>
+                <Link to="/#" className="has-arrow">
+                  <Video size={18} className="align-middle me-2" />
+                  <span>{t("Content")}</span>
+                </Link>
+                <ul className="sub-menu">
+                  <li>
+                    <Link to="/instructor/quizzes">{t("Quizzes")}</Link>
+                  </li>
+                  <li>
+                    <Link to="/instructor/announcements">
+                      {t("Announcements")}
+                    </Link>
+                  </li>
+                </ul>
+              </li>
               {/* <li>
                 <Link to="/#" className="has-arrow">
                   <DollarSign size={18} className="align-middle me-2" />

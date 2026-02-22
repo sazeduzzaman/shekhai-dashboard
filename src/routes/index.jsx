@@ -128,8 +128,8 @@ const authProtectedRoutes = [
   { path: "/instructors/performance", component: <InstructorPerformance /> },
 
   // Student Portal
+  { path: "/student/continue-courses", component: <ContinueCourses /> },
   { path: "/student/my-courses", component: <MyCourses /> },
-  // { path: "/student/continue-courses", component: <ContinueCourses /> },
   { path: "/student/continue-courses/:courseId", component: <ContinueCourses /> },
   { path: "/student/browse-courses", component: <BrowseCourses /> },
   { path: "/student/certificates", component: <Certificates /> },

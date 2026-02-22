@@ -546,11 +546,11 @@ const EditContentTab = ({
                                                 disabled={isSubmitting}
                                             >
                                                 <option value="video">Video</option>
-                                                <option value="article">Article</option>
+                                                {/* <option value="article">Article</option> */}
                                                 <option value="quiz">Quiz</option>
                                                 <option value="practice">Practice</option>
                                                 <option value="project">Project</option>
-                                                <option value="download">Download</option>
+                                                {/* <option value="download">Download</option> */}
                                             </select>
                                         </div>
                                     </div>

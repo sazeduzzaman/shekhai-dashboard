@@ -296,14 +296,13 @@ const MyCourses = () => {
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="d-flex justify-content-between mt-4">
-                                        <Link to={"/student/continue-courses"}
+                                    <div className="mt-4">
+                                        <Link to={`/student/continue-courses/${course.id}`}
                                             color="primary"
                                             size="sm"
-                                            className="d-flex align-items-center"
+                                            className=" btn btn-primary w-100 text-center"
                                         >
-                                            <BookOpen size={14} className="me-1" />
-                                            {course.progress > 0 ? 'Continue' : 'Start'}
+                                            {course.progress > 0 ? 'Continue' : 'Start Learning'}
                                         </Link>
                                     </div>
 

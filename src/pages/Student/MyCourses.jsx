@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   BookOpen,
   ArrowRight,
@@ -7,10 +7,19 @@ import {
   Play,
   CheckCircle,
   Clock,
-  Users,
   Award,
   Loader,
-  AlertCircle
+  AlertCircle,
+  BarChart2,
+  TrendingUp,
+  Calendar,
+  Users,
+  FileText,
+  Download,
+  Share2,
+  Bookmark,
+  Filter,
+  Search
 } from "react-feather";
 import {
   Badge,
@@ -20,20 +29,71 @@ import {
   Col,
   Progress,
   Row,
-  Alert
+  Alert,
+  Spinner,
+  Input,
+  InputGroup,
+  InputGroupText,
+  Dropdown,
+  DropdownToggle,
+  DropdownMenu,
+  DropdownItem
 } from "reactstrap";
 import axios from "axios";
 
 const MyCourses = () => {
+  // State management
   const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [filteredCourses, setFilteredCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("recent");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [stats, setStats] = useState({
     totalCourses: 0,
     averageProgress: 0,
     completedCourses: 0,
-    totalHours: 0
+    inProgressCourses: 0,
+    notStartedCourses: 0,
+    totalHours: 0,
+    completedHours: 0,
+    totalLessons: 0,
+    completedLessons: 0,
+    certificatesEarned: 0,
+    totalPoints: 0
   });
+
+  // Course colors for visual variety
+  const courseColors = [
+    "#6366f1", "#8b5cf6", "#ec4899", "#14b8a6", "#f59e0b", "#ef4444",
+    "#10b981", "#3b82f6", "#7c3aed", "#db2777", "#6b7280", "#64748b"
+  ];
+
+  // Helper function to get initials from name
+  const getInitials = (name) => {
+    if (!name) return "IN";
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  };
+
+  // Helper function to get random background color for initials
+  const getInitialsColor = (name) => {
+    const colors = [
+      '#6366f1', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#ef4444',
+      '#10b981', '#3b82f6', '#7c3aed', '#db2777', '#6b7280'
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
 
   // Get user data from localStorage
   const getUserData = () => {
@@ -44,16 +104,17 @@ const MyCourses = () => {
         return {
           email: userData.user?.email || userData.email,
           token: userData.token,
-          name: userData.user?.name || "Learner"
+          name: userData.user?.name || "Learner",
+          id: userData.user?.id || userData.id
         };
       }
     } catch (err) {
-      console.log("Error parsing user data:", err);
+      console.error("Error parsing user data:", err);
     }
     return null;
   };
 
-  // Fetch enrolled courses
+  // Fetch enrolled courses on component mount
   useEffect(() => {
     const fetchEnrolledCourses = async () => {
       try {
@@ -61,57 +122,77 @@ const MyCourses = () => {
         setError(null);
 
         const userData = getUserData();
-
         if (!userData?.email) {
           setError("Please log in to view your courses");
           setLoading(false);
           return;
         }
 
-        // Fetch enrolled courses by student email
         const response = await axios.get(
           `https://shekhai-server.onrender.com/api/v1/enrollments/student/${userData.email}`,
           {
             headers: {
-              "Content-Type": "application/json",
-              "Authorization": userData.token ? `Bearer ${userData.token}` : ""
-            }
+              Authorization: userData.token
+                ? `Bearer ${userData.token}`
+                : "",
+              "Content-Type": "application/json"
+            },
+            timeout: 10000 // 10 second timeout
           }
         );
 
-        console.log("Enrollments API Response:", response.data);
-
         if (response.data.success && response.data.data) {
-          // Transform API response
-          const courses = response.data.data.map((enrollment) => ({
-            id: enrollment.courseId || enrollment._id,
-            enrollmentId: enrollment._id,
+          // Transform API response to course objects
+          const courses = response.data.data.map((enrollment, index) => ({
+            id: enrollment.courseId || enrollment._id || `course-${index}`,
             title: enrollment.courseTitle || "Untitled Course",
-            category: getCategoryFromTitle(enrollment.courseTitle),
-            instructor: "Expert Instructor", // You might want to fetch this separately
-            progress: enrollment.progress || 0,
-            rating: 4.5, // Default, fetch from course details if available
-            duration: calculateDuration(enrollment.enrollmentDate),
-            lessons: 12, // Default, fetch from course details
-            color: getRandomColor(),
-            enrolledDate: enrollment.enrollmentDate,
-            lastAccessed: enrollment.lastAccessed,
-            status: enrollment.status || "active",
+            description: enrollment.courseDescription || "No description available",
+            category: enrollment.category || "General",
+            instructor: enrollment.instructor || "Expert Instructor",
+            progress: Math.min(enrollment.progress || 0, 100),
+            rating: enrollment.rating || 4.5,
+            totalRating: enrollment.totalRating || 0,
+            duration: enrollment.duration || "12h",
+            totalLessons: enrollment.totalLessons || 12,
+            completedLessons: enrollment.completedLessons || 0,
+            color: courseColors[index % courseColors.length],
+            lastAccessed: enrollment.lastAccessed || new Date().toISOString(),
+            enrolledDate: enrollment.enrolledDate || new Date().toISOString(),
             certificateIssued: enrollment.certificateIssued || false,
-            price: enrollment.coursePrice || 0,
-            paymentStatus: enrollment.paymentInfo?.status || "Completed"
+            certificateUrl: enrollment.certificateUrl,
+            milestones: enrollment.milestones || [],
+            nextLesson: enrollment.nextLesson || "Introduction",
+            prerequisites: enrollment.prerequisites || [],
+            skills: enrollment.skills || ["Critical Thinking", "Problem Solving"],
+            level: enrollment.level || "Beginner",
+            language: enrollment.language || "English",
+            hasCertificate: enrollment.hasCertificate || false,
+            isFavorite: enrollment.isFavorite || false,
+            lastLessonCompleted: enrollment.lastLessonCompleted,
+            timeSpent: enrollment.timeSpent || 0, // in minutes
+            achievements: enrollment.achievements || [],
+            notes: enrollment.notes || 0,
+            quizzes: enrollment.quizzes || [],
+            assignments: enrollment.assignments || []
           }));
 
           setEnrolledCourses(courses);
-
-          // Calculate statistics
           calculateStatistics(courses);
+          filterAndSortCourses(courses, searchTerm, sortBy);
         } else {
-          setError("No courses found");
+          setError("No courses found. Start learning today!");
         }
       } catch (err) {
-        console.error("Error fetching enrolled courses:", err);
-        setError(err.response?.data?.message || "Failed to load courses. Please try again.");
+        if (err.code === 'ECONNABORTED') {
+          setError("Request timed out. Please check your connection.");
+        } else if (err.response) {
+          setError(`Error: ${err.response.data.message || 'Failed to load courses'}`);
+        } else if (err.request) {
+          setError("Network error. Please check your connection.");
+        } else {
+          setError("Failed to load courses. Please try again.");
+        }
+        console.error("Error fetching courses:", err);
       } finally {
         setLoading(false);
       }
@@ -120,104 +201,135 @@ const MyCourses = () => {
     fetchEnrolledCourses();
   }, []);
 
-  // Helper functions
-  const getCategoryFromTitle = (title) => {
-    if (!title) return "General";
-    const titleLower = title.toLowerCase();
-    if (titleLower.includes("web") || titleLower.includes("development")) return "Web Development";
-    if (titleLower.includes("data") || titleLower.includes("science")) return "Data Science";
-    if (titleLower.includes("mobile") || titleLower.includes("app")) return "Mobile Development";
-    if (titleLower.includes("design")) return "Design";
-    if (titleLower.includes("business")) return "Business";
-    if (titleLower.includes("marketing")) return "Marketing";
-    return "General";
-  };
+  // Filter and sort courses when dependencies change
+  useEffect(() => {
+    filterAndSortCourses(enrolledCourses, searchTerm, sortBy);
+  }, [enrolledCourses, searchTerm, sortBy]);
 
-  const calculateDuration = (enrollmentDate) => {
-    if (!enrollmentDate) return "12h";
-    const enrolled = new Date(enrollmentDate);
-    const now = new Date();
-    const diffHours = Math.abs(now - enrolled) / (1000 * 60 * 60);
-    return diffHours < 24 ? `${Math.ceil(diffHours)}h` : `${Math.ceil(diffHours / 24)}d`;
-  };
-
-  const getRandomColor = () => {
-    const colors = [
-      "#6366f1", // Indigo
-      "#10b981", // Emerald
-      "#f59e0b", // Amber
-      "#0ea5e9", // Sky Blue
-      "#8b5cf6", // Violet
-      "#ec4899", // Pink
-      "#14b8a6", // Teal
-      "#f97316"  // Orange
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
-  };
-
+  // Calculate comprehensive statistics
   const calculateStatistics = (courses) => {
     const totalProgress = courses.reduce((sum, course) => sum + course.progress, 0);
-    const averageProgress = courses.length > 0 ? Math.round(totalProgress / courses.length) : 0;
-    const completedCourses = courses.filter(course => course.progress === 100).length;
-    const totalHours = courses.length * 12; // Assuming 12h per course
+    const totalCompletedLessons = courses.reduce((sum, course) => sum + course.completedLessons, 0);
+    const totalLessons = courses.reduce((sum, course) => sum + course.totalLessons, 0);
+    const totalTimeSpent = courses.reduce((sum, course) => sum + course.timeSpent, 0);
+    
+    // Calculate points based on progress and achievements
+    const totalPoints = courses.reduce((sum, course) => {
+      const progressPoints = Math.floor(course.progress * 10);
+      const achievementPoints = course.achievements.length * 50;
+      return sum + progressPoints + achievementPoints;
+    }, 0);
 
     setStats({
       totalCourses: courses.length,
-      averageProgress,
-      completedCourses,
-      totalHours
+      averageProgress: courses.length ? Math.round(totalProgress / courses.length) : 0,
+      completedCourses: courses.filter((c) => c.progress === 100).length,
+      inProgressCourses: courses.filter((c) => c.progress > 0 && c.progress < 100).length,
+      notStartedCourses: courses.filter((c) => c.progress === 0).length,
+      totalHours: Math.round(totalLessons * 1.5), // Assuming 1.5 hours per lesson
+      completedHours: Math.round(totalCompletedLessons * 1.5),
+      totalLessons,
+      completedLessons: totalCompletedLessons,
+      certificatesEarned: courses.filter((c) => c.certificateIssued).length,
+      totalPoints
     });
   };
 
+  // Filter and sort courses based on user preferences
+  const filterAndSortCourses = (courses, search, sort) => {
+    let filtered = [...courses];
+
+    // Filter by search term
+    if (search) {
+      const term = search.toLowerCase();
+      filtered = filtered.filter(c => 
+        c.title.toLowerCase().includes(term) ||
+        c.category.toLowerCase().includes(term) ||
+        c.instructor.toLowerCase().includes(term) ||
+        c.description.toLowerCase().includes(term)
+      );
+    }
+
+    // Sort courses
+    switch (sort) {
+      case "recent":
+        filtered.sort((a, b) => new Date(b.lastAccessed) - new Date(a.lastAccessed));
+        break;
+      case "progress":
+        filtered.sort((a, b) => b.progress - a.progress);
+        break;
+      case "title":
+        filtered.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "duration":
+        filtered.sort((a, b) => b.duration.localeCompare(a.duration));
+        break;
+      default:
+        break;
+    }
+
+    setFilteredCourses(filtered);
+  };
+
+  // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return "Recently";
     const date = new Date(dateString);
     const now = new Date();
-    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    return `${Math.floor(diffDays / 30)} months ago`;
+    const diff = (now - date) / (1000 * 60 * 60 * 24);
+    
+    if (diff < 1) return "Today";
+    if (diff < 2) return "Yesterday";
+    if (diff < 7) return `${Math.floor(diff)} days ago`;
+    if (diff < 30) return `${Math.floor(diff / 7)} weeks ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const handleContinueCourse = (courseId) => {
-    // Navigate to the course player with course ID
-    Navigate(`/student/continue-courses/${courseId}`);
+  // Get course level badge color
+  const getLevelBadgeColor = (level) => {
+    switch(level?.toLowerCase()) {
+      case 'beginner': return 'success';
+      case 'intermediate': return 'warning';
+      case 'advanced': return 'danger';
+      default: return 'secondary';
+    }
   };
 
+  // Toggle favorite status
+  const toggleFavorite = (courseId) => {
+    setEnrolledCourses(prev => 
+      prev.map(c => c.id === courseId ? { ...c, isFavorite: !c.isFavorite } : c)
+    );
+  };
+
+  // Loading state
   if (loading) {
     return (
-      <div className="modern-dashboard p-4 mt-5 pt-5">
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
-          <div className="text-center">
-            <Loader size={48} className="text-primary mb-3 animate-spin" />
-            <h4 className="text-slate-700">Loading your courses...</h4>
-            <p className="text-muted">Fetching your learning journey</p>
-          </div>
+      <div className="min-vh-100 d-flex align-items-center justify-content-center">
+        <div className="text-center">
+          <Spinner color="primary" style={{ width: '3rem', height: '3rem' }}>
+            Loading...
+          </Spinner>
+          <p className="mt-3 text-muted">Loading your learning journey...</p>
         </div>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
-      <div className="modern-dashboard p-4 mt-5 pt-5">
-        <Alert color="danger" className="rounded-3 border-0 shadow-sm">
-          <div className="d-flex align-items-center">
-            <AlertCircle size={24} className="me-3" />
-            <div>
-              <h5 className="alert-heading mb-1">Unable to Load Courses</h5>
-              <p className="mb-0">{error}</p>
-            </div>
-          </div>
-          <div className="mt-3">
-            <Button color="primary" onClick={() => window.location.reload()}>
-              Try Again
-            </Button>
-            <Button color="link" tag={Link} to="/courses" className="ms-2">
-              Browse Courses
+      <div className="p-5">
+        <Alert color="danger" className="d-flex align-items-center">
+          <AlertCircle size={20} className="me-2" />
+          <div>
+            <strong>Error!</strong> {error}
+            <Button 
+              color="link" 
+              className="ms-3 p-0" 
+              onClick={() => window.location.reload()}
+            >
+              Retry
             </Button>
           </div>
         </Alert>
@@ -225,396 +337,397 @@ const MyCourses = () => {
     );
   }
 
-  return (
-    <div className="modern-dashboard p-4 mt-5 pt-5">
-      {/* Informative Header */}
-      <header className="mb-5">
-        <Row className="align-items-end">
-          <Col md="8">
-            <div className="d-flex align-items-center gap-2 mb-2">
-              <span className="live-indicator"></span>
-              <span className="text-uppercase fw-bold text-primary small tracking-widest">
-                Active Learning
-              </span>
-            </div>
-            <h1 className="fw-black text-slate-900 mb-2">
-              Welcome back, {getUserData()?.name || "Explorer"}!
-            </h1>
-            <p className="text-muted lead mb-0">
-              You have{" "}
-              <span className="text-dark fw-bold">{enrolledCourses.length} active courses</span>.
-              {stats.averageProgress > 50 ? " Keep up the great work!" : " Let's start learning!"}
-            </p>
-          </Col>
-          <Col md="4" className="text-md-end mt-3 mt-md-0">
-            <Button
-              color="white"
-              className="shadow-sm border-0 rounded-pill px-4 py-2 me-2"
-              onClick={() => {
-                // Show statistics modal or page
-                console.log("Show statistics");
-              }}
-            >
-              <Award size={16} className="me-2" />
-              Statistics
-            </Button>
-            <Button
-              color="primary"
-              className="shadow-lg border-0 rounded-pill px-4 py-2"
-              tag={Link}
-              to="/courses"
-            >
-              Find New <ArrowRight size={16} className="ms-1" />
-            </Button>
-          </Col>
-        </Row>
-      </header>
+  const userData = getUserData();
 
-      {/* Quick Stats */}
-      {enrolledCourses.length > 0 && (
-        <Row className="g-3 mb-5">
-          <Col md="3" sm="6">
-            <Card className="border-0 shadow-sm rounded-3 bg-gradient-primary text-white">
-              <CardBody className="p-3">
-                <div className="d-flex align-items-center">
-                  <div className="bg-white-20 rounded-circle p-3 me-3">
-                    <BookOpen size={24} />
-                  </div>
-                  <div>
-                    <h3 className="fw-black mb-0">{stats.totalCourses}</h3>
-                    <small className="opacity-80">Total Courses</small>
-                  </div>
+  return (
+    <div className="p-4 mt-5 bg-light min-vh-100">
+      {/* Welcome Header */}
+      <div className="mb-4">
+        <h2 className="mb-1">
+          Welcome back, {userData?.name || "Learner"}! 
+          <span className="h5 text-muted ms-2">👋</span>
+        </h2>
+        <p className="text-muted">
+          Continue your learning journey and track your progress
+        </p>
+      </div>
+
+      {/* Statistics Cards */}
+      <Row className="g-4 mb-4">
+        <Col sm="6" lg="3">
+          <Card className="border-0 shadow-sm h-100">
+            <CardBody>
+              <div className="d-flex align-items-center">
+                <div className="bg-primary bg-opacity-10 p-3 rounded-3 me-3">
+                  <BookOpen size={24} className="text-primary" />
                 </div>
-              </CardBody>
-            </Card>
-          </Col>
-          <Col md="3" sm="6">
-            <Card className="border-0 shadow-sm rounded-3 bg-gradient-success text-white">
-              <CardBody className="p-3">
-                <div className="d-flex align-items-center">
-                  <div className="bg-white-20 rounded-circle p-3 me-3">
-                    <CheckCircle size={24} />
-                  </div>
-                  <div>
-                    <h3 className="fw-black mb-0">{stats.averageProgress}%</h3>
-                    <small className="opacity-80">Avg. Progress</small>
-                  </div>
+                <div>
+                  <h6 className="text-muted mb-1">Total Courses</h6>
+                  <h3 className="mb-0">{stats.totalCourses}</h3>
                 </div>
-              </CardBody>
-            </Card>
-          </Col>
-          <Col md="3" sm="6">
-            <Card className="border-0 shadow-sm rounded-3 bg-gradient-warning text-white">
-              <CardBody className="p-3">
-                <div className="d-flex align-items-center">
-                  <div className="bg-white-20 rounded-circle p-3 me-3">
-                    <Award size={24} />
-                  </div>
-                  <div>
-                    <h3 className="fw-black mb-0">{stats.completedCourses}</h3>
-                    <small className="opacity-80">Completed</small>
-                  </div>
+              </div>
+            </CardBody>
+          </Card>
+        </Col>
+        <Col sm="6" lg="3">
+          <Card className="border-0 shadow-sm h-100">
+            <CardBody>
+              <div className="d-flex align-items-center">
+                <div className="bg-success bg-opacity-10 p-3 rounded-3 me-3">
+                  <CheckCircle size={24} className="text-success" />
                 </div>
-              </CardBody>
-            </Card>
-          </Col>
-          <Col md="3" sm="6">
-            <Card className="border-0 shadow-sm rounded-3 bg-gradient-info text-white">
-              <CardBody className="p-3">
-                <div className="d-flex align-items-center">
-                  <div className="bg-white-20 rounded-circle p-3 me-3">
-                    <Clock size={24} />
-                  </div>
-                  <div>
-                    <h3 className="fw-black mb-0">{stats.totalHours}h</h3>
-                    <small className="opacity-80">Learning Hours</small>
-                  </div>
+                <div>
+                  <h6 className="text-muted mb-1">Completed</h6>
+                  <h3 className="mb-0">{stats.completedCourses}</h3>
                 </div>
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-      )}
+              </div>
+            </CardBody>
+          </Card>
+        </Col>
+        <Col sm="6" lg="3">
+          <Card className="border-0 shadow-sm h-100">
+            <CardBody>
+              <div className="d-flex align-items-center">
+                <div className="bg-warning bg-opacity-10 p-3 rounded-3 me-3">
+                  <Clock size={24} className="text-warning" />
+                </div>
+                <div>
+                  <h6 className="text-muted mb-1">In Progress</h6>
+                  <h3 className="mb-0">{stats.inProgressCourses}</h3>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        </Col>
+        <Col sm="6" lg="3">
+          <Card className="border-0 shadow-sm h-100">
+            <CardBody>
+              <div className="d-flex align-items-center">
+                <div className="bg-info bg-opacity-10 p-3 rounded-3 me-3">
+                  <Award size={24} className="text-info" />
+                </div>
+                <div>
+                  <h6 className="text-muted mb-1">Certificates</h6>
+                  <h3 className="mb-0">{stats.certificatesEarned}</h3>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Progress Overview */}
+      {/* <Card className="border-0 shadow-sm mb-4">
+        <CardBody>
+          <Row>
+            <Col md="6">
+              <h6 className="text-muted mb-3">Overall Progress</h6>
+              <div className="d-flex align-items-center mb-3">
+                <div className="flex-grow-1 me-3">
+                  <Progress multi>
+                    <Progress bar color="success" value={stats.averageProgress} />
+                  </Progress>
+                </div>
+                <span className="fw-bold">{stats.averageProgress}%</span>
+              </div>
+              <div className="d-flex gap-3">
+                <div>
+                  <span className="badge bg-success me-2">&nbsp;</span>
+                  <small>Completed ({stats.completedCourses})</small>
+                </div>
+                <div>
+                  <span className="badge bg-warning me-2">&nbsp;</span>
+                  <small>In Progress ({stats.inProgressCourses})</small>
+                </div>
+              </div>
+            </Col>
+            <Col md="6">
+              <Row className="g-3">
+                <Col sm="6">
+                  <div className="d-flex align-items-center">
+                    <BarChart2 size={18} className="text-primary me-2" />
+                    <div>
+                      <small className="text-muted d-block">Lessons Completed</small>
+                      <strong>{stats.completedLessons}/{stats.totalLessons}</strong>
+                    </div>
+                  </div>
+                </Col>
+                <Col sm="6">
+                  <div className="d-flex align-items-center">
+                    <Clock size={18} className="text-primary me-2" />
+                    <div>
+                      <small className="text-muted d-block">Hours Spent</small>
+                      <strong>{stats.completedHours}h/{stats.totalHours}h</strong>
+                    </div>
+                  </div>
+                </Col>
+                <Col sm="6">
+                  <div className="d-flex align-items-center">
+                    <TrendingUp size={18} className="text-primary me-2" />
+                    <div>
+                      <small className="text-muted d-block">Points Earned</small>
+                      <strong>{stats.totalPoints}</strong>
+                    </div>
+                  </div>
+                </Col>
+                <Col sm="6">
+                  <div className="d-flex align-items-center">
+                    <Award size={18} className="text-primary me-2" />
+                    <div>
+                      <small className="text-muted d-block">Certificates</small>
+                      <strong>{stats.certificatesEarned}</strong>
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+            </Col>
+          </Row>
+        </CardBody>
+      </Card> */}
+
+      {/* Search and Filter Bar */}
+      {/* <Row className="mb-4 align-items-center">
+        <Col md="6">
+          <InputGroup>
+            <InputGroupText>
+              <Search size={18} />
+            </InputGroupText>
+            <Input
+              placeholder="Search your courses..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </InputGroup>
+        </Col>
+        <Col md="6">
+          <div className="d-flex justify-content-md-end mt-3 mt-md-0">
+            <Dropdown isOpen={dropdownOpen} toggle={() => setDropdownOpen(!dropdownOpen)}>
+              <DropdownToggle color="light" className="me-2">
+                <Filter size={18} className="me-2" />
+                Sort by: {sortBy.charAt(0).toUpperCase() + sortBy.slice(1)}
+              </DropdownToggle>
+              <DropdownMenu>
+                <DropdownItem onClick={() => setSortBy("recent")}>Recent Activity</DropdownItem>
+                <DropdownItem onClick={() => setSortBy("progress")}>Progress</DropdownItem>
+                <DropdownItem onClick={() => setSortBy("title")}>Title</DropdownItem>
+                <DropdownItem onClick={() => setSortBy("duration")}>Duration</DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
+          </div>
+        </Col>
+      </Row> */}
 
       {/* Course Grid */}
-      {enrolledCourses.length > 0 ? (
+      {filteredCourses.length === 0 ? (
+        <Card className="border-0 shadow-sm text-center py-5">
+          <CardBody>
+            <BookOpen size={48} className="text-muted mb-3" />
+            <h5>No courses found</h5>
+            <p className="text-muted mb-3">
+              {searchTerm 
+                ? "Try adjusting your search" 
+                : "Start your learning journey by enrolling in a course"}
+            </p>
+            <Button tag={Link} to="/courses" color="primary">
+              Browse Courses
+            </Button>
+          </CardBody>
+        </Card>
+      ) : (
         <Row className="g-4">
-          {enrolledCourses.map((course) => (
-            <Col xl="3" lg="4" md="6" key={course.id}>
-              <Card className="info-card border-0">
-                {/* Infographic Header Area */}
+          {filteredCourses.map((course) => (
+            <Col lg="3" md="6" key={course.id}>
+              <Card className="border-0 shadow-sm h-100 hover-lift">
+                {/* Course Header with Color */}
                 <div
-                  className="info-header"
+                  className="position-relative rounded-top"
                   style={{
-                    background: `linear-gradient(135deg, ${course.color}dd, ${course.color})`,
+                    background: course.color,
+                    height: 160,
+                    backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.2) 100%)'
                   }}
                 >
-                  <div className="info-overlay">
-                    <div className="d-flex justify-content-between w-100 p-3">
-                      <Badge className="glass-pill">{course.category}</Badge>
-                      <div className="lessons-badge">
-                        <BookOpen size={12} className="me-1" /> {course.lessons} Lessons
-                      </div>
+                  {/* Play Button Overlay */}
+                  <Link
+                    to={`/student/continue-courses/${course.id}`}
+                    className="position-absolute top-50 start-50 translate-middle text-white"
+                    style={{ zIndex: 2 }}
+                  >
+                    <div className="bg-white bg-opacity-25 rounded-circle p-3">
+                      <Play size={32} fill="white" />
                     </div>
-                    <div className="play-trigger" onClick={() => handleContinueCourse(course.id)}>
-                      <div className="play-blur"></div>
-                      <Play
-                        size={28}
-                        fill="white"
-                        className="text-white position-relative"
-                        style={{ zIndex: 2 }}
-                      />
-                    </div>
-                  </div>
-                  <div className="shape-1"></div>
-                  <div className="shape-2"></div>
+                  </Link>
+                  
+                  {/* Favorite Button */}
+                  <Button
+                    color="link"
+                    className="position-absolute top-0 end-0 m-2 text-white"
+                    onClick={() => toggleFavorite(course.id)}
+                  >
+                    <Bookmark 
+                      size={20} 
+                      fill={course.isFavorite ? "white" : "none"} 
+                    />
+                  </Button>
+
+                  {/* Category Badge */}
+                  <Badge 
+                    color="light" 
+                    className="position-absolute bottom-0 start-0 m-3"
+                  >
+                    {course.category}
+                  </Badge>
                 </div>
 
-                <CardBody className="p-4 bg-white rounded-bottom-4">
-                  <div className="mb-4">
-                    <h5 className="fw-bold text-slate-800 mb-1 text-truncate">
-                      {course.title}
-                    </h5>
-                    <div className="d-flex align-items-center text-muted small">
-                      <CheckCircle size={14} className="text-success me-1" />
-                      <span>{course.instructor}</span>
-                    </div>
+                <CardBody>
+                  {/* Title and Level */}
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <h5 className="fw-bold mb-0 me-2">{course.title}</h5>
+                    <Badge color={getLevelBadgeColor(course.level)}>
+                      {course.level}
+                    </Badge>
                   </div>
-
-                  {/* Infographic Progress Strip */}
-                  <div className="stats-strip mb-4">
-                    <div className="stat-item">
-                      <span className="stat-label">Rating</span>
-                      <span className="stat-value text-warning">
-                        <Star size={12} fill="#ffc107" /> {course.rating}
-                      </span>
-                    </div>
-                    <div className="stat-divider"></div>
-                    <div className="stat-item">
-                      <span className="stat-label">Duration</span>
-                      <span className="stat-value text-dark">
-                        {course.duration}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="progress-area mb-4">
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                      <span className="small fw-bold text-slate-600">
-                        Completion
-                      </span>
-                      <span
-                        className="small fw-black"
-                        style={{ color: course.color }}
-                      >
-                        {course.progress}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={course.progress}
-                      className="progress-sm"
-                      barStyle={{
-                        background: course.color,
-                        borderRadius: "20px",
+                  
+                  {/* Instructor with Initials */}
+                  <div className="d-flex align-items-center mb-3">
+                    <div 
+                      className="rounded-circle me-2 d-flex align-items-center justify-content-center text-white fw-bold"
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        backgroundColor: getInitialsColor(course.instructor),
+                        fontSize: '10px'
                       }}
-                    />
+                    >
+                      {getInitials(course.instructor)}
+                    </div>
+                    <small className="text-muted">{course.instructor}</small>
                   </div>
 
-                  <div className="d-flex justify-content-between align-items-center mb-3">
+                  {/* Course Description */}
+                  <p className="text-muted small mb-3">
+                    {course.description.length > 100 
+                      ? `${course.description.substring(0, 100)}...` 
+                      : course.description}
+                  </p>
+
+                  {/* Skills Tags */}
+                  <div className="mb-3">
+                    {course.skills.slice(0, 3).map((skill, index) => (
+                      <Badge 
+                        key={index} 
+                        color="light" 
+                        className="me-1 mb-1"
+                      >
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="mb-3">
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                      <small className="text-muted">Progress</small>
+                      <small className="fw-bold">{course.progress}%</small>
+                    </div>
+                    <Progress value={course.progress} />
+                  </div>
+
+                  {/* Course Stats */}
+                  <Row className="g-2 mb-3">
+                    <Col xs="6">
+                      <div className="d-flex align-items-center">
+                        <BookOpen size={14} className="text-muted me-1" />
+                        <small className="text-muted">
+                          {course.completedLessons}/{course.totalLessons} Lessons
+                        </small>
+                      </div>
+                    </Col>
+                    <Col xs="6">
+                      <div className="d-flex align-items-center">
+                        <Clock size={14} className="text-muted me-1" />
+                        <small className="text-muted">{course.duration}</small>
+                      </div>
+                    </Col>
+                    <Col xs="6">
+                      <div className="d-flex align-items-center">
+                        <Star size={14} className="text-warning me-1" />
+                        <small className="text-muted">{course.rating} ({course.totalRating})</small>
+                      </div>
+                    </Col>
+                    <Col xs="6">
+                      <div className="d-flex align-items-center">
+                        <Users size={14} className="text-muted me-1" />
+                        <small className="text-muted">{course.language}</small>
+                      </div>
+                    </Col>
+                  </Row>
+
+                  {/* Last Accessed */}
+                  <div className="d-flex align-items-center mb-3">
+                    <Calendar size={14} className="text-muted me-1" />
                     <small className="text-muted">
                       Last accessed: {formatDate(course.lastAccessed)}
                     </small>
-                    {course.certificateIssued && (
-                      <Badge color="success" pill>
-                        <Award size={10} className="me-1" />
-                        Certified
-                      </Badge>
-                    )}
                   </div>
 
-                  <Button
-                    onClick={() => handleContinueCourse(course.id)}
-                    className="continue-btn"
-                    style={{ "--btn-color": course.color }}
-                  >
-                    {course.progress > 0 ? "Continue Learning" : "Start Learning"}
-                  </Button>
+                  {/* Next Lesson */}
+                  {course.progress < 100 && course.nextLesson && (
+                    <div className="bg-light p-2 rounded-3 mb-3">
+                      <small className="text-muted d-block">Next up:</small>
+                      <small className="fw-bold">{course.nextLesson}</small>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="d-flex gap-2">
+                    <Button
+                      tag={Link}
+                      to={`/student/continue-courses/${course.id}`}
+                      color="primary"
+                      className="flex-grow-1"
+                    >
+                      {course.progress > 0 ? "Continue" : "Start"} Learning
+                    </Button>
+                    
+                    {course.certificateIssued && (
+                      <Button 
+                        color="success" 
+                        tag={Link} 
+                        to={course.certificateUrl}
+                        target="_blank"
+                      >
+                        <Award size={18} />
+                      </Button>
+                    )}
+                    
+                    {/* <Button color="light">
+                      <Share2 size={18} />
+                    </Button> */}
+                  </div>
+
+                  {/* Milestone Badges */}
+                  {course.milestones.length > 0 && (
+                    <div className="mt-3">
+                      {course.milestones.map((milestone, index) => (
+                        <Badge 
+                          key={index}
+                          color="success" 
+                          pill 
+                          className="me-1"
+                        >
+                          <CheckCircle size={12} className="me-1" />
+                          {milestone}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </CardBody>
               </Card>
             </Col>
           ))}
         </Row>
-      ) : (
-        <div className="text-center py-5">
-          <div className="mb-4">
-            <BookOpen size={64} className="text-muted" />
-          </div>
-          <h3 className="text-slate-700 mb-2">No Courses Enrolled Yet</h3>
-          <p className="text-muted mb-4">Start your learning journey by enrolling in courses</p>
-          <Button
-            color="primary"
-            className="rounded-pill px-4 py-2"
-            tag={Link}
-            to="/courses"
-          >
-            Browse Courses <ArrowRight size={16} className="ms-2" />
-          </Button>
-        </div>
       )}
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-
-        .modern-dashboard {
-          font-family: 'Plus Jakarta Sans', sans-serif;
-          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-          min-height: 100vh;
-        }
-
-        .fw-black { font-weight: 800; }
-        .text-slate-900 { color: #0f172a; }
-        .text-slate-800 { color: #1e293b; }
-        .tracking-widest { letter-spacing: 0.1em; }
-
-        .live-indicator {
-          width: 8px;
-          height: 8px;
-          background: #ef4444;
-          border-radius: 50%;
-          display: inline-block;
-          box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
-          animation: pulse 2s infinite;
-        }
-
-        .bg-gradient-primary { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
-        .bg-gradient-success { background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); }
-        .bg-gradient-warning { background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); }
-        .bg-gradient-info { background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%); }
-        
-        .bg-white-20 { background: rgba(255, 255, 255, 0.2); }
-
-        .info-card {
-          border-radius: 24px;
-          overflow: hidden;
-          transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        }
-
-        .info-card:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        }
-
-        .info-header {
-          height: 140px;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .info-overlay {
-          position: relative;
-          z-index: 5;
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-
-        .glass-pill {
-          background: rgba(255, 255, 255, 0.2);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          font-weight: 600;
-          border-radius: 50px;
-        }
-
-        .lessons-badge {
-          font-size: 0.7rem;
-          color: white;
-          font-weight: 600;
-          background: rgba(0,0,0,0.2);
-          padding: 4px 10px;
-          border-radius: 50px;
-        }
-
-        .play-trigger {
-          position: relative;
-          margin-top: 10px;
-          cursor: pointer;
-          transition: transform 0.3s ease;
-        }
-
-        .play-trigger:hover {
-          transform: scale(1.1);
-        }
-
-        .play-blur {
-          position: absolute;
-          top: 50%; left: 50%;
-          transform: translate(-50%, -50%);
-          width: 50px; height: 50px;
-          background: rgba(255, 255, 255, 0.4);
-          filter: blur(15px);
-          border-radius: 50%;
-        }
-
-        .stats-strip {
-          display: flex;
-          background: #f8fafc;
-          border-radius: 16px;
-          padding: 12px;
-          justify-content: space-around;
-          align-items: center;
-        }
-
-        .stat-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-
-        .stat-label { font-size: 0.65rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
-        .stat-value { font-size: 0.85rem; font-weight: 800; }
-        .stat-divider { width: 1px; height: 20px; background: #e2e8f0; }
-
-        .progress-sm { height: 6px; background-color: #f1f5f9; border-radius: 10px; }
-
-        .continue-btn {
-          background: white;
-          border: 2px solid var(--btn-color);
-          color: var(--btn-color);
-          font-weight: 800;
-          border-radius: 14px;
-          padding: 10px;
-          transition: all 0.3s;
-        }
-
-        .continue-btn:hover {
-          background: var(--btn-color);
-          color: white;
-          box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-          transform: translateY(-2px);
-        }
-
-        /* Abstract shapes in card header */
-        .shape-1 { position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.1); }
-        .shape-2 { position: absolute; bottom: -30px; left: -10px; width: 100px; height: 100px; border-radius: 50%; background: rgba(0,0,0,0.05); }
-
-        .animate-spin {
-          animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
-        @keyframes pulse {
-          0% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.5); opacity: 0.5; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 };
