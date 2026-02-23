@@ -340,6 +340,10 @@ const LiveSessionPage = () => {
                     <i className="bi bi-plus-circle me-1"></i>
                     Create Live Session
                   </Link>
+                  <Link to="/live-sessions/register/users" className="btn btn-primary">
+                    <i className="bi bi-plus-circle me-1"></i>
+                    Registered Users
+                  </Link>
                 </div>
               </div>
             </div>

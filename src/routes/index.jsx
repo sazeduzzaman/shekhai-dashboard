@@ -90,6 +90,7 @@ import Enrollments from "../pages/Enrollements/Enrollements";
 import CreateLiveSessionPage from "../pages/Instructor/AddLiveSession";
 import StudyBit from "../pages/Dashboard/StudyBit/StudyBit";
 import EditLiveSession from "../pages/Instructor/EditLiveSession";
+import LiveSessionUsers from "../pages/Instructor/LiveSessionUsers";
 
 // ======================================================================
 // 🔒 AUTH PROTECTED ROUTES
@@ -147,6 +148,7 @@ const authProtectedRoutes = [
   { path: "/all/live-sessions", component: <LiveSessionPage /> },
   { path: "/live-sessions/create", component: <CreateLiveSessionPage /> },
   { path: "/live-sessions/edit/:id", component: <EditLiveSession /> },
+  { path: "/live-sessions/register/users", component: <LiveSessionUsers /> },
 
   // Webinar & Mentor Room
   { path: "/webinar-management", component: <WebinarManagement /> },
